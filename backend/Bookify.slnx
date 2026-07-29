@@ -5,4 +5,10 @@
     <Project Path="src/Bookify.Infrastructure/Bookify.Infrastructure.csproj" />
     <Project Path="src/Bookify.WebApi/Bookify.WebApi.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Bookify.Application.Tests/Bookify.Application.Tests.csproj" />
+    <Project Path="tests/Bookify.Domain.Tests/Bookify.Domain.Tests.csproj" />
+    <Project Path="tests/Bookify.Infrastructure.Tests/Bookify.Infrastructure.Tests.csproj" />
+    <Project Path="tests/Bookify.WebApi.Tests/Bookify.WebApi.Tests.csproj" />
+  </Folder>
 </Solution>
