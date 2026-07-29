@@ -140,5 +140,7 @@ public class AppointmentLogConfiguration : IEntityTypeConfiguration<AppointmentL
 
         builder.HasIndex(l => l.AppointmentId)
             .HasDatabaseName("IX_AppointmentLogs_AppointmentId");
+
+        builder.HasQueryFilter(l => !l.IsDeleted);
     }
 }

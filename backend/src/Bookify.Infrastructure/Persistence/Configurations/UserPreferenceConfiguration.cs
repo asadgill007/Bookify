@@ -50,5 +50,7 @@ public class UserPreferenceConfiguration : IEntityTypeConfiguration<UserPreferen
             .WithOne(u => u.Preference)
             .HasForeignKey<UserPreference>(up => up.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasQueryFilter(up => !up.IsDeleted);
     }
 }

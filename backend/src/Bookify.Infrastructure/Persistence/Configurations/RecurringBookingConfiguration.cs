@@ -22,12 +22,19 @@ public class RecurringBookingConfiguration : IEntityTypeConfiguration<RecurringB
 
         builder.Property(r => r.DayOfMonth);
 
+        var daysOfWeekConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<List<DayOfWeek>, string>(
+            v => string.Join(',', v.Select(d => (int)d)),
+            v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                  .Select(s => (DayOfWeek)int.Parse(s))
+                  .ToList());
+
+        var daysOfWeekComparer = new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<List<DayOfWeek>>(
+            (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+            c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c.ToList());
+
         builder.Property(r => r.DaysOfWeek)
-            .HasConversion(
-                v => string.Join(',', v.Select(d => (int)d)),
-                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                      .Select(s => (DayOfWeek)int.Parse(s))
-                      .ToList())
+            .HasConversion(daysOfWeekConverter, daysOfWeekComparer)
             .HasMaxLength(100);
 
         builder.Property(r => r.StartTime)

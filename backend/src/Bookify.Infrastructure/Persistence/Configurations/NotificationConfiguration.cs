@@ -15,7 +15,8 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         builder.Property(n => n.Type)
             .IsRequired()
             .HasConversion<int>()
-            .HasDefaultValue(Domain.Enums.NotificationType.System);
+            .HasDefaultValue(Domain.Enums.NotificationType.System)
+            .HasSentinel(Domain.Enums.NotificationType.AppointmentReminder);
 
         builder.Property(n => n.Title)
             .IsRequired()

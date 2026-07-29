@@ -107,5 +107,7 @@ public class PaymentTransactionConfiguration : IEntityTypeConfiguration<PaymentT
 
         builder.HasIndex(pt => pt.PaymentId)
             .HasDatabaseName("IX_PaymentTransactions_PaymentId");
+
+        builder.HasQueryFilter(pt => !pt.IsDeleted);
     }
 }
