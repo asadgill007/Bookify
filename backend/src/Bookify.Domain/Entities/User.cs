@@ -6,17 +6,17 @@ namespace Bookify.Domain.Entities;
 
 public sealed class User : BaseEntity
 {
-    public string FirstName { get; private set; }
-    public string LastName { get; private set; }
-    public string Email { get; private set; }
+    public string FirstName { get; private set; } = null!;
+    public string LastName { get; private set; } = null!;
+    public string Email { get; private set; } = null!;
     public string? PhoneNumber { get; private set; }
-    public string PasswordHash { get; private set; }
+    public string PasswordHash { get; private set; } = null!;
     public UserRole Role { get; private set; }
     public string? AvatarUrl { get; private set; }
     public bool IsBiometricEnabled { get; private set; }
     public DateTime? LastLoginAt { get; private set; }
-    public string PreferredLanguage { get; private set; }
-    public string PreferredCurrency { get; private set; }
+    public string PreferredLanguage { get; private set; } = null!;
+    public string PreferredCurrency { get; private set; } = null!;
     public bool IsSuspended { get; private set; }
     public DateTime? SuspendedAt { get; private set; }
     public Guid? SuspendedBy { get; private set; }

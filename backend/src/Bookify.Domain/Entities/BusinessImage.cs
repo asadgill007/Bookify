@@ -5,7 +5,7 @@ namespace Bookify.Domain.Entities;
 public sealed class BusinessImage : BaseEntity
 {
     public Guid BusinessId { get; private set; }
-    public string Url { get; private set; }
+    public string Url { get; private set; } = null!;
     public string? AltText { get; private set; }
     public int DisplayOrder { get; private set; }
     public bool IsCover { get; private set; }

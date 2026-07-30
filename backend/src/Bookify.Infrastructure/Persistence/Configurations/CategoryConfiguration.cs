@@ -39,6 +39,8 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
             .WithOne(sc => sc.Category)
             .HasForeignKey(sc => sc.CategoryId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasQueryFilter(c => !c.IsDeleted);
     }
 }
 
@@ -64,5 +66,7 @@ public class SubCategoryConfiguration : IEntityTypeConfiguration<SubCategory>
 
         builder.HasIndex(sc => sc.CategoryId)
             .HasDatabaseName("IX_SubCategories_CategoryId");
+
+        builder.HasQueryFilter(sc => !sc.IsDeleted);
     }
 }

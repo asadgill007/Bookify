@@ -23,14 +23,14 @@ public sealed class Document : BaseEntity
     public Guid? ProviderId { get; private set; }
     public Guid UploadedByUserId { get; private set; }
     public DocumentType DocumentType { get; private set; }
-    public string FileName { get; private set; }
-    public string OriginalFileName { get; private set; }
-    public string ContentType { get; private set; }
-    public string Extension { get; private set; }
+    public string FileName { get; private set; } = null!;
+    public string OriginalFileName { get; private set; } = null!;
+    public string ContentType { get; private set; } = null!;
+    public string Extension { get; private set; } = null!;
     public long FileSize { get; private set; }
-    public string StoragePath { get; private set; }
+    public string StoragePath { get; private set; } = null!;
     public string? ThumbnailPath { get; private set; }
-    public string ContentHash { get; private set; }
+    public string ContentHash { get; private set; } = null!;
     public int Version { get; private set; }
 
     public Appointment? Appointment { get; private set; }

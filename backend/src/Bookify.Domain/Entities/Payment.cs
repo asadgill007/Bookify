@@ -9,7 +9,7 @@ public sealed class Payment : BaseEntity
     public Guid AppointmentId { get; private set; }
     public Guid CustomerId { get; private set; }
     public decimal Amount { get; private set; }
-    public string Currency { get; private set; }
+    public string Currency { get; private set; } = null!;
     public PaymentMethod PaymentMethod { get; private set; }
     public PaymentStatus Status { get; private set; }
     public string? TransactionId { get; private set; }
@@ -77,7 +77,7 @@ public sealed class Payment : BaseEntity
 public sealed class PaymentTransaction : BaseEntity
 {
     public Guid PaymentId { get; private set; }
-    public string Action { get; private set; }
+    public string Action { get; private set; } = null!;
     public decimal Amount { get; private set; }
     public string? ProviderResponse { get; private set; }
     public bool IsSuccess { get; private set; }

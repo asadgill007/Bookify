@@ -4,8 +4,8 @@ namespace Bookify.Domain.Entities;
 
 public sealed class Category : BaseEntity
 {
-    public string Name { get; private set; }
-    public string Slug { get; private set; }
+    public string Name { get; private set; } = null!;
+    public string Slug { get; private set; } = null!;
     public string? IconName { get; private set; }
     public int DisplayOrder { get; private set; }
     public bool IsActive { get; private set; }
@@ -47,8 +47,8 @@ public sealed class Category : BaseEntity
 public sealed class SubCategory : BaseEntity
 {
     public Guid CategoryId { get; private set; }
-    public string Name { get; private set; }
-    public string Slug { get; private set; }
+    public string Name { get; private set; } = null!;
+    public string Slug { get; private set; } = null!;
     public bool IsActive { get; private set; }
 
     public Category Category { get; private set; } = null!;

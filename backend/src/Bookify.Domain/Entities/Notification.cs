@@ -7,8 +7,8 @@ public sealed class Notification : BaseEntity
 {
     public Guid UserId { get; private set; }
     public NotificationType Type { get; private set; }
-    public string Title { get; private set; }
-    public string Body { get; private set; }
+    public string Title { get; private set; } = null!;
+    public string Body { get; private set; } = null!;
     public string? Data { get; private set; }
     public bool IsRead { get; private set; }
 

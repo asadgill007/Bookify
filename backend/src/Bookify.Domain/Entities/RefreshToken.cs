@@ -5,8 +5,8 @@ namespace Bookify.Domain.Entities;
 public sealed class RefreshToken : BaseEntity
 {
     public Guid UserId { get; private set; }
-    public string Token { get; private set; }
-    public string JwtId { get; private set; }
+    public string Token { get; private set; } = null!;
+    public string JwtId { get; private set; } = null!;
     public bool IsUsed { get; private set; }
     public bool IsRevoked { get; private set; }
     public DateTime ExpiresAt { get; private set; }

@@ -6,7 +6,8 @@ public class AIInterpretationResult
 {
     public string Intent { get; set; } = string.Empty;
     public Dictionary<string, string> ExtractedFilters { get; set; } = new();
-    public string? SuggestedQuery { get; set; }
+    public string SuggestedQuery { get; set; } = string.Empty;
+    public decimal Confidence { get; set; }
 }
 
 public class AISearchRequest

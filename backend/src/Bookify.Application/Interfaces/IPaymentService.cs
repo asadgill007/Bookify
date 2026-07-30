@@ -20,6 +20,8 @@ public class PaymentResult
     public string? TransactionId { get; set; }
     public string? PaymentUrl { get; set; }
     public string? ErrorMessage { get; set; }
+    public string? Status { get; set; }
+    public string? ClientSecret { get; set; }
 }
 
 public class RefundRequest

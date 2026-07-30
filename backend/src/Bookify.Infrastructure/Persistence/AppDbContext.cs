@@ -49,8 +49,21 @@ public class AppDbContext : DbContext
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
-        // Global query filter for soft deletes on entities that implement ISoftDeletable
-        // Each entity configuration that has soft delete should set its own HasQueryFilter
+        // Global query filters for soft deletes on all entities with IsDeleted
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            var isDeletedProp = entityType.FindProperty("IsDeleted");
+            if (isDeletedProp != null && isDeletedProp.ClrType == typeof(bool))
+            {
+                var parameter = System.Linq.Expressions.Expression.Parameter(entityType.ClrType, "e");
+                var filter = System.Linq.Expressions.Expression.Lambda(
+                    System.Linq.Expressions.Expression.Equal(
+                        System.Linq.Expressions.Expression.Property(parameter, "IsDeleted"),
+                        System.Linq.Expressions.Expression.Constant(false)),
+                    parameter);
+                entityType.SetQueryFilter(filter);
+            }
+        }
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

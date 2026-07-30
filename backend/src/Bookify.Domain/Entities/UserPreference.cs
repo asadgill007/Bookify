@@ -5,8 +5,8 @@ namespace Bookify.Domain.Entities;
 public sealed class UserPreference : BaseEntity
 {
     public Guid UserId { get; private set; }
-    public string Language { get; private set; }
-    public string Currency { get; private set; }
+    public string Language { get; private set; } = null!;
+    public string Currency { get; private set; } = null!;
     public string? Interests { get; private set; }
     public bool IsDarkMode { get; private set; }
     public bool IsAmoledMode { get; private set; }

@@ -8,17 +8,17 @@ namespace Bookify.Domain.Entities;
 public sealed class Business : BaseEntity
 {
     public Guid OwnerId { get; private set; }
-    public string Name { get; private set; }
-    public string Slug { get; private set; }
+    public string Name { get; private set; } = null!;
+    public string Slug { get; private set; } = null!;
     public string? Description { get; private set; }
     public string? Email { get; private set; }
     public string? PhoneNumber { get; private set; }
-    public string AddressLine1 { get; private set; }
+    public string AddressLine1 { get; private set; } = null!;
     public string? AddressLine2 { get; private set; }
-    public string City { get; private set; }
+    public string City { get; private set; } = null!;
     public string? State { get; private set; }
-    public string PostalCode { get; private set; }
-    public string Country { get; private set; }
+    public string PostalCode { get; private set; } = null!;
+    public string Country { get; private set; } = null!;
     public double? Latitude { get; private set; }
     public double? Longitude { get; private set; }
     public string? Website { get; private set; }
@@ -26,8 +26,8 @@ public sealed class Business : BaseEntity
     public bool IsActive { get; private set; }
     public BookingType BookingType { get; private set; }
     public string? CancellationPolicy { get; private set; }
-    public string TimeZone { get; private set; }
-    public string Currency { get; private set; }
+    public string TimeZone { get; private set; } = null!;
+    public string Currency { get; private set; } = null!;
     public double AverageRating { get; private set; }
     public int TotalReviews { get; private set; }
     public string? CoverImageUrl { get; private set; }

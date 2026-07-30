@@ -6,7 +6,7 @@ namespace Bookify.Domain.Entities;
 
 public sealed class Appointment : BaseEntity
 {
-    public string BookingReference { get; private set; }
+    public string BookingReference { get; private set; } = null!;
     public Guid CustomerId { get; private set; }
     public Guid ProviderId { get; private set; }
     public Guid ServiceId { get; private set; }
@@ -17,7 +17,7 @@ public sealed class Appointment : BaseEntity
     public string? CustomerNotes { get; private set; }
     public bool IsCustomerNotified { get; private set; }
     public decimal TotalAmount { get; private set; }
-    public string Currency { get; private set; }
+    public string Currency { get; private set; } = null!;
     public string? CancellationReason { get; private set; }
     public Guid? RescheduledFromId { get; private set; }
 

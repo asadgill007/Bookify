@@ -1,11 +1,12 @@
-# .NET
+# ──────────────────────────────────
+# .NET / Backend (backend/)
+# ──────────────────────────────────
 bin/
 obj/
 *.user
 *.suo
 *.sln.docstates
 *.userosscache
-*.nupkg
 *.dbmdl
 *.jfm
 
@@ -27,22 +28,16 @@ bld/
 secrets.json
 appsettings.*.local.json
 
-# VS Code
+# VS Code / Rider
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# Rider
-.idea/
 *.sln.iml
 
 # OS
 .DS_Store
 Thumbs.db
-
-# EF Core Migrations (generated)
-# Keep these tracked — they are part of the source
 
 # Logs
 *.log
@@ -56,3 +51,65 @@ packages/
 # Diagnostic artifacts
 *.nupkg
 *.snupkg
+
+# EF Core Migrations (keep tracked)
+# Keep these tracked — they are part of the source
+
+# ──────────────────────────────────
+# Flutter / Dart (mobile/)
+# ──────────────────────────────────
+mobile/build/
+mobile/.dart_tool/
+mobile/.packages
+mobile/.pub/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/pubspec.lock
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/ios/Flutter/Flutter.framework
+mobile/ios/Flutter/Flutter.podspec
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/key.properties
+mobile/android/app/build/
+mobile/android/build/
+mobile/.android/
+mobile/.ios/
+
+# Generated code (freezed, json_serializable)
+mobile/lib/**/*.freezed.dart
+mobile/lib/**/*.g.dart
+
+# Android signing
+*.keystore
+*.jks
+mobile/android/key.properties
+
+# Flutter IntelliJ / IDEA
+mobile/.idea/
+mobile/.vscode/
+mobile/*.iml
+mobile/android/*.iml
+mobile/ios/*.iml
+
+# Node (for tooling)
+node_modules/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Runtime output logs
+api_error*.txt
+api_output*.txt
+*_output.txt
+build_output.txt
+test_output.txt
+flutter_analyze.txt
+flutter_run_*.txt
+
+# Coverage
+coverage/
+*.lcov

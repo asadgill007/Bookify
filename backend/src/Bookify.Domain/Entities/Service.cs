@@ -5,11 +5,11 @@ namespace Bookify.Domain.Entities;
 public sealed class Service : BaseEntity
 {
     public Guid BusinessId { get; private set; }
-    public string Name { get; private set; }
+    public string Name { get; private set; } = null!;
     public string? Description { get; private set; }
     public int DurationMinutes { get; private set; }
     public decimal PriceAmount { get; private set; }
-    public string PriceCurrency { get; private set; }
+    public string PriceCurrency { get; private set; } = null!;
     public string? Category { get; private set; }
     public bool IsActive { get; private set; }
     public int DisplayOrder { get; private set; }
