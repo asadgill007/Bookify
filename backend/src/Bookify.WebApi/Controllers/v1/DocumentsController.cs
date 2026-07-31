@@ -43,7 +43,8 @@ public class DocumentsController : ApiController
             DocumentType = docType,
             FileName = file.FileName,
             Content = stream,
-            ContentType = file.ContentType
+            ContentType = file.ContentType,
+            IsAdmin = User.IsInRole("Admin")
         };
 
         var result = await _mediator.Send(command, cancellationToken);
@@ -104,7 +105,12 @@ public class DocumentsController : ApiController
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        var command = new DeleteDocumentCommand { DocumentId = id, UserId = GetUserId() };
+        var command = new DeleteDocumentCommand
+        {
+            DocumentId = id,
+            UserId = GetUserId(),
+            IsAdmin = User.IsInRole("Admin")
+        };
         var result = await _mediator.Send(command, cancellationToken);
         return HandleResult(result);
     }

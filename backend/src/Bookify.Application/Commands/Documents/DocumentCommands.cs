@@ -18,6 +18,9 @@ public sealed record UploadDocumentCommand : IRequest<Result<Guid>>
     public string FileName { get; init; } = string.Empty;
     public Stream Content { get; init; } = Stream.Null;
     public string ContentType { get; init; } = string.Empty;
+
+    /// <summary>True when the requesting user has the Admin role.</summary>
+    public bool IsAdmin { get; init; }
 }
 
 public sealed class UploadDocumentCommandValidator : AbstractValidator<UploadDocumentCommand>
@@ -76,17 +79,20 @@ public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumen
     private readonly IUnitOfWork _unitOfWork;
     private readonly IFileStorageService _fileStorage;
     private readonly IVirusScanService _virusScan;
+    private readonly IPermissionService _permissionService;
     private readonly ILogger<UploadDocumentCommandHandler> _logger;
 
     public UploadDocumentCommandHandler(
         IUnitOfWork unitOfWork,
         IFileStorageService fileStorage,
         IVirusScanService virusScan,
+        IPermissionService permissionService,
         ILogger<UploadDocumentCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _fileStorage = fileStorage;
         _virusScan = virusScan;
+        _permissionService = permissionService;
         _logger = logger;
     }
 
@@ -95,6 +101,14 @@ public sealed class UploadDocumentCommandHandler : IRequestHandler<UploadDocumen
         var business = await _unitOfWork.Businesses.GetByIdAsync(request.BusinessId, cancellationToken);
         if (business == null)
             return Result<Guid>.Failure("Business not found.", "NOT_FOUND");
+
+        // Only the business owner, one of its providers, or an admin may attach documents.
+        if (!request.IsAdmin
+            && !await _permissionService.CanManageBusinessAsync(request.UploadedByUserId, business.Id, cancellationToken)
+            && !await _permissionService.IsProviderForBusinessAsync(request.UploadedByUserId, business.Id, cancellationToken))
+        {
+            return Result<Guid>.Failure("You do not have permission to upload documents for this business.", "FORBIDDEN");
+        }
 
         // Virus scan the file
         var scanResult = await _virusScan.ScanAsync(request.Content, request.FileName, cancellationToken);
@@ -158,6 +172,9 @@ public sealed record DeleteDocumentCommand : IRequest<Result>
 {
     public Guid DocumentId { get; init; }
     public Guid UserId { get; init; }
+
+    /// <summary>True when the requesting user has the Admin role.</summary>
+    public bool IsAdmin { get; init; }
 }
 
 public sealed class DeleteDocumentCommandValidator : AbstractValidator<DeleteDocumentCommand>
@@ -173,15 +190,18 @@ public sealed class DeleteDocumentCommandHandler : IRequestHandler<DeleteDocumen
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IFileStorageService _fileStorage;
+    private readonly IPermissionService _permissionService;
     private readonly ILogger<DeleteDocumentCommandHandler> _logger;
 
     public DeleteDocumentCommandHandler(
         IUnitOfWork unitOfWork,
         IFileStorageService fileStorage,
+        IPermissionService permissionService,
         ILogger<DeleteDocumentCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _fileStorage = fileStorage;
+        _permissionService = permissionService;
         _logger = logger;
     }
 
@@ -190,6 +210,14 @@ public sealed class DeleteDocumentCommandHandler : IRequestHandler<DeleteDocumen
         var document = await _unitOfWork.Documents.GetByIdAsync(request.DocumentId, cancellationToken);
         if (document == null)
             return Result.Failure("Document not found.", "NOT_FOUND");
+
+        // Only the business owner, one of its providers, or an admin may delete documents.
+        if (!request.IsAdmin
+            && !await _permissionService.CanManageBusinessAsync(request.UserId, document.BusinessId, cancellationToken)
+            && !await _permissionService.IsProviderForBusinessAsync(request.UserId, document.BusinessId, cancellationToken))
+        {
+            return Result.Failure("You do not have permission to delete this document.", "FORBIDDEN");
+        }
 
         // Soft delete in database
         document.SoftDelete();
