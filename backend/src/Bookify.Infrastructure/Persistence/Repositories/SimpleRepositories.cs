@@ -139,6 +139,17 @@ public class NotificationRepository : BaseRepository<Notification>, INotificatio
     }
 }
 
+public class UserPreferenceRepository : BaseRepository<UserPreference>, IUserPreferenceRepository
+{
+    public UserPreferenceRepository(AppDbContext context) : base(context) { }
+
+    public async Task<UserPreference?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .FirstOrDefaultAsync(up => up.UserId == userId, cancellationToken);
+    }
+}
+
 public class CategoryRepository : BaseRepository<Category>, ICategoryRepository
 {
     public CategoryRepository(AppDbContext context) : base(context) { }

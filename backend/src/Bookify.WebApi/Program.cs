@@ -13,14 +13,11 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Serilog ──
+// Sinks (Console + rolling File) are configured in appsettings.json's Serilog section.
+// Keep the programmatic configuration minimal to avoid duplicate sinks.
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {CorrelationId} {Elapsed:000}ms {Message:lj}{NewLine}{Exception}")
-    .WriteTo.File("logs/bookify-.log",
-        rollingInterval: RollingInterval.Day,
-        retainedFileCountLimit: 30,
-        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {CorrelationId} {Message:lj}{NewLine}{Exception}")
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -202,8 +199,13 @@ var app = builder.Build();
 var hasHangfireConnection = !string.IsNullOrEmpty(app.Configuration.GetConnectionString("HangfireConnection"));
 
 // ── Security Middleware ──
-app.UseHsts();
-app.UseHttpsRedirection();
+// HSTS and HTTPS redirection are enforced outside Development so local HTTP
+// development (the Flutter app talks to http://localhost:5136) keeps working.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
 app.UseMiddleware<SecurityHeadersMiddleware>();
 
 // ── Request Pipeline ──
@@ -224,18 +226,17 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseCors("ApiCorsPolicy");
 app.UseRateLimiter();
 
-// ── Swagger (Available in all environments, with auth in production) ──
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+// ── Swagger (Development & Staging only — not exposed in Production) ──
+if (app.Environment.IsDevelopment() || app.Environment.IsStaging())
 {
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Bookify API v1");
-    options.RoutePrefix = "swagger";
-    if (!app.Environment.IsDevelopment())
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
     {
-        // In non-development, only allow access from same site
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Bookify API v1");
+        options.RoutePrefix = "swagger";
         options.DisplayRequestDuration();
-    }
-});
+    });
+}
 
 app.UseAuthentication();
 app.UseAuthorization();

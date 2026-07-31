@@ -47,13 +47,15 @@ public sealed class UpdateUserPreferencesCommandHandler : IRequestHandler<Update
 
         user.UpdatePreferences(request.Language, request.Currency);
 
-        var existingPref = user.Preference;
+        var interests = request.Interests != null ? string.Join(",", request.Interests) : null;
+        var existingPref = await _unitOfWork.UserPreferences.GetByUserIdAsync(request.UserId, cancellationToken);
+
         if (existingPref != null)
         {
             existingPref.Update(
                 request.Language,
                 request.Currency,
-                request.Interests != null ? string.Join(",", request.Interests) : null,
+                interests,
                 request.IsDarkMode,
                 request.IsAmoledMode,
                 request.NotificationsEnabled,
@@ -65,11 +67,13 @@ public sealed class UpdateUserPreferencesCommandHandler : IRequestHandler<Update
             pref.Update(
                 request.Language,
                 request.Currency,
-                request.Interests != null ? string.Join(",", request.Interests) : null,
+                interests,
                 request.IsDarkMode,
                 request.IsAmoledMode,
                 request.NotificationsEnabled,
                 request.MarketingEmails);
+
+            await _unitOfWork.UserPreferences.AddAsync(pref, cancellationToken);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

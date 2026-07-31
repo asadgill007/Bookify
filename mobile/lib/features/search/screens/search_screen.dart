@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../business/providers/businesses_provider.dart';
+import '../../categories/providers/categories_provider.dart';
 
 /// Search screen — wired to real business search API.
 class SearchScreen extends ConsumerStatefulWidget {
@@ -37,6 +38,56 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  /// Shows a filter bottom sheet: pick a category to narrow the search.
+  Future<void> _showFilterSheet() async {
+    final categoriesAsync = ref.read(categoriesProvider);
+    final categories = categoriesAsync.valueOrNull ?? const [];
+    final selected = await showModalBottomSheet<String?>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text('Filter by category',
+                style: Theme.of(sheetContext).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            if (categories.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('No categories available'),
+              )
+            else
+              ...categories.map(
+                (cat) => ListTile(
+                  leading: Icon(
+                    Icons.category_outlined,
+                    color: cat.slug == _categorySlug
+                        ? Theme.of(sheetContext).colorScheme.primary
+                        : null,
+                  ),
+                  title: Text(cat.name),
+                  trailing: cat.slug == _categorySlug
+                      ? Icon(Icons.check,
+                          color: Theme.of(sheetContext).colorScheme.primary)
+                      : null,
+                  onTap: () => Navigator.pop(sheetContext, cat.slug),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+
+    if (selected == null) return;
+    setState(() {
+      _categorySlug = selected;
+      // Clear the text query so results come from the category filter.
+      _currentQuery = '';
+      _categoryQuery = '';
+    });
   }
 
   void _performSearch(String query) {
@@ -75,9 +126,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.tune),
-            onPressed: () {
-              // TODO: Show filter options
-            },
+            onPressed: _showFilterSheet,
           ),
         ],
       ),

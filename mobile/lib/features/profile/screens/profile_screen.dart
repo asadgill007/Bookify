@@ -2,15 +2,113 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../appointments/screens/appointments_screen.dart';
+import '../../../core/constants/api_constants.dart';
+import '../../../core/network/api_client.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
+
+  Future<void> _showEditProfileDialog(BuildContext context, WidgetRef ref) async {
+    final authState = ref.read(authProvider);
+    final firstName = TextEditingController(text: authState.email?.split('@').first ?? '');
+    final lastName = TextEditingController();
+    final phone = TextEditingController();
+    var isSubmitting = false;
+    String? error;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) {
+          Future<void> submit() async {
+            if (firstName.text.trim().isEmpty || lastName.text.trim().isEmpty) {
+              setState(() => error = 'First and last name are required.');
+              return;
+            }
+            setState(() {
+              isSubmitting = true;
+              error = null;
+            });
+            try {
+              final api = ref.read(apiClientProvider);
+              final response = await api.put(
+                ApiConstants.userProfile,
+                data: {
+                  'firstName': firstName.text.trim(),
+                  'lastName': lastName.text.trim(),
+                  'phoneNumber': phone.text.trim().isEmpty ? null : phone.text.trim(),
+                },
+              );
+              if (!ctx.mounted) return;
+              if (response.statusCode == 200) {
+                Navigator.pop(ctx);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Profile updated successfully')),
+                  );
+                }
+              } else {
+                setState(() => error = 'Could not update profile. Please try again.');
+              }
+            } catch (_) {
+              setState(() => error = 'Network error. Please try again.');
+            } finally {
+              if (ctx.mounted) setState(() => isSubmitting = false);
+            }
+          }
+
+          return AlertDialog(
+            title: const Text('Edit Profile'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: firstName,
+                  decoration: const InputDecoration(labelText: 'First Name'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: lastName,
+                  decoration: const InputDecoration(labelText: 'Last Name'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: phone,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(labelText: 'Phone Number (optional)'),
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(error!, style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: isSubmitting ? null : submit,
+                child: isSubmitting
+                    ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Save'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final authState = ref.watch(authProvider);
+    final appointmentsAsync = ref.watch(appointmentsProvider);
+    final bookingsCount = appointmentsAsync.valueOrNull?.length ?? 0;
 
     return Scaffold(
       body: SafeArea(
@@ -47,13 +145,11 @@ class ProfileScreen extends ConsumerWidget {
                       style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
                     ),
                     const SizedBox(height: 24),
-                    // Stats
+                    // Stats (bookings count is real data from the API)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        _buildStat(theme, '12', 'Bookings'),
-                        _buildStat(theme, '4', 'Reviews'),
-                        _buildStat(theme, '3', 'Favorites'),
+                        _buildStat(theme, '$bookingsCount', 'Bookings'),
                       ],
                     ),
                     const SizedBox(height: 32),
@@ -61,7 +157,8 @@ class ProfileScreen extends ConsumerWidget {
                     Card(
                       child: Column(
                         children: [
-                          _buildMenuItem(Icons.person_outline, 'Edit Profile', () => {}),
+                          _buildMenuItem(Icons.person_outline, 'Edit Profile',
+                              () => _showEditProfileDialog(context, ref)),
                           const Divider(height: 1),
                           _buildMenuItem(Icons.calendar_month_outlined, 'My Appointments', () => context.push('/appointments')),
                           const Divider(height: 1),
@@ -77,7 +174,11 @@ class ProfileScreen extends ConsumerWidget {
                                 () => context.push('/admin/review')),
                           if (authState.role == 'Admin')
                             const Divider(height: 1),
-                          _buildMenuItem(Icons.favorite_outline, 'Favorites', () => {}),
+                          _buildMenuItem(Icons.favorite_outline, 'Favorites', () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Favorites coming soon')),
+                            );
+                          }),
                           const Divider(height: 1),
                           _buildMenuItem(Icons.notifications_outlined, 'Notifications', () => context.push('/notifications')),
                         ],

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/categories_provider.dart';
+import '../../business/providers/businesses_provider.dart';
 
 /// Browse categories screen — wired to real backend API via Riverpod.
 class CategoriesScreen extends ConsumerWidget {
@@ -78,7 +80,13 @@ class CategoriesScreen extends ConsumerWidget {
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
                   onTap: () {
-                    // TODO: Navigate to category results
+                    context.push(
+                      '/search',
+                      extra: SearchIntent(
+                        query: cat.name,
+                        categorySlug: cat.slug,
+                      ),
+                    );
                   },
                   child: Padding(
                     padding: const EdgeInsets.all(16),

@@ -207,6 +207,11 @@ public interface INotificationRepository : IRepository<Domain.Entities.Notificat
     Task MarkAllAsReadAsync(Guid userId, CancellationToken cancellationToken = default);
 }
 
+public interface IUserPreferenceRepository : IRepository<Domain.Entities.UserPreference>
+{
+    Task<Domain.Entities.UserPreference?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+}
+
 public interface ICategoryRepository : IRepository<Domain.Entities.Category>
 {
     Task<Domain.Entities.Category?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default);

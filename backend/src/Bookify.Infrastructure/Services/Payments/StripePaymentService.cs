@@ -203,13 +203,13 @@ public class StripeSettings
     public string BaseUrl { get; set; } = "https://bookify.app";
     
     // Test Keys (from Stripe Dashboard > Developers > API Keys)
-    public string TestPublishableKey { get; set; } = "pk_test_xxx";
-    public string TestSecretKey { get; set; } = "sk_test_xxx";
+    public string TestPublishableKey { get; set; } = string.Empty;
+    public string TestSecretKey { get; set; } = string.Empty;
     
     // Live Keys (replace with actual keys in production)
-    public string LivePublishableKey { get; set; } = "pk_live_xxx";
-    public string LiveSecretKey { get; set; } = "sk_live_xxx";
+    public string LivePublishableKey { get; set; } = string.Empty;
+    public string LiveSecretKey { get; set; } = string.Empty;
     
     // Webhook secret for verifying webhook signatures
-    public string WebhookSecret { get; set; } = "whsec_xxx";
+    public string WebhookSecret { get; set; } = string.Empty;
 }

@@ -11,6 +11,7 @@ public interface IUnitOfWork : IDisposable
     IReviewRepository Reviews { get; }
     IPaymentRepository Payments { get; }
     INotificationRepository Notifications { get; }
+    IUserPreferenceRepository UserPreferences { get; }
     ICategoryRepository Categories { get; }
     IRefreshTokenRepository RefreshTokens { get; }
     IRecurringBookingRepository RecurringBookings { get; }

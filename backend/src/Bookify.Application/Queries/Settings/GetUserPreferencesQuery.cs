@@ -25,14 +25,16 @@ public sealed class GetUserPreferencesQueryHandler : IRequestHandler<GetUserPref
         if (user == null)
             return Result<UserPreferencesDto>.Failure("User not found.", "NOT_FOUND");
 
+        var preference = await _unitOfWork.UserPreferences.GetByUserIdAsync(request.UserId, cancellationToken);
+
         return Result<UserPreferencesDto>.Success(new UserPreferencesDto
         {
             Language = user.PreferredLanguage,
             Currency = user.PreferredCurrency,
-            IsDarkMode = user.Preference?.IsDarkMode ?? false,
-            IsAmoledMode = user.Preference?.IsAmoledMode ?? false,
-            NotificationsEnabled = user.Preference?.NotificationsEnabled ?? true,
-            MarketingEmails = user.Preference?.MarketingEmails ?? false
+            IsDarkMode = preference?.IsDarkMode ?? false,
+            IsAmoledMode = preference?.IsAmoledMode ?? false,
+            NotificationsEnabled = preference?.NotificationsEnabled ?? true,
+            MarketingEmails = preference?.MarketingEmails ?? false
         });
     }
 }

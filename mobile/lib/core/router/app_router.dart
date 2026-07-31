@@ -62,7 +62,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         '/checkout',
         '/confirmation',
         '/my-business',
-        '/onboarding',
+        '/provider-onboarding',
         '/admin/review',
       ];
 
@@ -116,7 +116,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/otp-verification',
         name: 'otp-verification',
-        builder: (context, state) => const OtpVerificationScreen(),
+        builder: (context, state) => OtpVerificationScreen(
+          email: state.extra is String ? state.extra as String : null,
+        ),
       ),
       GoRoute(
         path: '/categories',
@@ -131,7 +133,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
-        path: '/onboarding',
+        path: '/provider-onboarding',
         name: 'provider-onboarding',
         builder: (context, state) => const ProviderOnboardingScreen(),
       ),

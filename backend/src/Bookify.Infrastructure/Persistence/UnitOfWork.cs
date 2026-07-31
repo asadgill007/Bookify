@@ -23,6 +23,7 @@ public class UnitOfWork : IUnitOfWork
     public IReviewRepository Reviews { get; }
     public IPaymentRepository Payments { get; }
     public INotificationRepository Notifications { get; }
+    public IUserPreferenceRepository UserPreferences { get; }
     public ICategoryRepository Categories { get; }
     public IRefreshTokenRepository RefreshTokens { get; }
     public IRecurringBookingRepository RecurringBookings { get; }
@@ -42,6 +43,7 @@ public class UnitOfWork : IUnitOfWork
         IReviewRepository reviews,
         IPaymentRepository payments,
         INotificationRepository notifications,
+        IUserPreferenceRepository userPreferences,
         ICategoryRepository categories,
         IRefreshTokenRepository refreshTokens,
         IRecurringBookingRepository recurringBookings,
@@ -60,6 +62,7 @@ public class UnitOfWork : IUnitOfWork
         Reviews = reviews;
         Payments = payments;
         Notifications = notifications;
+        UserPreferences = userPreferences;
         Categories = categories;
         RefreshTokens = refreshTokens;
         RecurringBookings = recurringBookings;

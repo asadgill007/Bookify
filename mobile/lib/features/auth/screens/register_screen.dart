@@ -48,8 +48,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (!mounted || !ok) return;
     final isBusiness = _accountType == AccountType.businessOwner ||
         _accountType == AccountType.provider;
-    // Business owners / providers go straight into onboarding.
-    context.go(isBusiness ? '/onboarding' : '/');
+    // Business owners / providers go straight into provider onboarding.
+    context.go(isBusiness ? '/provider-onboarding' : '/');
   }
 
   @override

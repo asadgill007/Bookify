@@ -1,6 +1,9 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Bookify.Application.DTOs.Auth;
+using Bookify.Domain.Entities;
+using Bookify.Domain.Enums;
 using Bookify.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
@@ -18,6 +21,10 @@ namespace Bookify.WebApi.Tests.IntegrationTests;
 /// </summary>
 public class BookifyTestApplicationFactory : WebApplicationFactory<Program>
 {
+    // Unique InMemory database per factory instance so parallel test classes never
+    // share (and race on) the same process-wide EF InMemory store.
+    private readonly string _dbName = $"BookifyTestDb_{Guid.NewGuid():N}";
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         // Skip database seed and Hangfire for tests
@@ -30,7 +37,7 @@ public class BookifyTestApplicationFactory : WebApplicationFactory<Program>
 
         // Use InMemory database for testing
         builder.UseSetting("UseInMemoryDatabase", "true");
-        builder.UseSetting("ConnectionStrings:DefaultConnection", "BookifyTestDb");
+        builder.UseSetting("ConnectionStrings:DefaultConnection", _dbName);
 
         builder.ConfigureServices(services =>
         {
@@ -140,7 +147,7 @@ public class ApiIntegrationTests : IClassFixture<BookifyTestApplicationFactory>
             HttpStatusCode.UnprocessableEntity);
     }
 
-    [Fact(Skip = "Requires seeded database data to complete full auth flow")]
+    [Fact]
     public async Task Auth_RegisterAndLogin_Flow()
     {
         // Arrange — register a new user
@@ -170,23 +177,114 @@ public class ApiIntegrationTests : IClassFixture<BookifyTestApplicationFactory>
         };
         var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest);
 
-        // Assert — login succeeds with tokens
+        // Assert — login succeeds with tokens (response uses the { data: {...} } envelope)
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var loginContent = await loginResponse.Content.ReadFromJsonAsync<AuthResponse>();
-        loginContent.Should().NotBeNull();
-        loginContent!.AccessToken.Should().NotBeNullOrEmpty();
-        loginContent.RefreshToken.Should().NotBeNullOrEmpty();
+        var envelope = await loginResponse.Content.ReadFromJsonAsync<AuthEnvelope>();
+        envelope.Should().NotBeNull();
+        envelope!.Data.Should().NotBeNull();
+        envelope.Data!.AccessToken.Should().NotBeNullOrEmpty();
+        envelope.Data.RefreshToken.Should().NotBeNullOrEmpty();
     }
 
-    [Fact(Skip = "Requires seeded appointment data")]
+    /// <summary>Typed shape of the ApiResponse envelope returned by the API.</summary>
+    private sealed class AuthEnvelope
+    {
+        public AuthResponse? Data { get; set; }
+    }
+
+    [Fact]
     public async Task Appointments_CreateAndVerify_Flow()
     {
-        // This test would:
-        // 1. Login as a customer
-        // 2. Get available slots for a provider
-        // 3. Create an appointment
-        // 4. Verify the appointment was created
-        // Requires seeded data: businesses, providers, services, and available slots.
-        await Task.CompletedTask;
+        // Arrange — seed provider, business and service directly (customer is registered via API)
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await dbContext.Database.EnsureCreatedAsync();
+
+        var providerUser = new User("Test", "Provider", $"provider_{Guid.NewGuid():N}@test.com", "hash", UserRole.Provider);
+        dbContext.Users.Add(providerUser);
+        await dbContext.SaveChangesAsync();
+
+        var business = new Business(providerUser.Id, "Test Business", $"test-business-{Guid.NewGuid():N}", "Test", "Test", "12345", "Test", "UTC");
+        dbContext.Businesses.Add(business);
+        await dbContext.SaveChangesAsync();
+
+        var provider = new Provider(providerUser.Id, business.Id, "Senior Staff");
+        dbContext.Providers.Add(provider);
+        await dbContext.SaveChangesAsync();
+
+        var service = new Service(business.Id, "Test Service", 60, 100);
+        dbContext.Services.Add(service);
+        await dbContext.SaveChangesAsync();
+
+        // Register + login a customer via the API
+        var email = $"customer_{Guid.NewGuid():N}@test.com";
+        var password = "Test@123456!";
+        var registerResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            FirstName = "Test",
+            LastName = "Customer",
+            Email = email,
+            Password = password,
+            ConfirmPassword = password,
+            AccountType = "customer"
+        });
+        registerResponse.StatusCode.Should().BeOneOf(
+            HttpStatusCode.OK,
+            HttpStatusCode.Created,
+            HttpStatusCode.NoContent);
+
+        var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", new { Email = email, Password = password });
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var loginEnvelope = await loginResponse.Content.ReadFromJsonAsync<AuthEnvelope>();
+        var token = loginEnvelope!.Data!.AccessToken;
+
+        // Act — create an appointment
+        var startTime = DateTime.UtcNow.AddDays(3).Date.AddHours(10);
+        var createRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/appointments")
+        {
+            Content = JsonContent.Create(new
+            {
+                ProviderId = provider.Id,
+                ServiceId = service.Id,
+                BusinessId = business.Id,
+                StartTime = startTime,
+                EndTime = startTime.AddHours(1)
+            })
+        };
+        createRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var createResponse = await _client.SendAsync(createRequest);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        // Assert — the appointment appears in the user's list
+        var listRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/appointments?page=1&pageSize=10");
+        listRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var listResponse = await _client.SendAsync(listRequest);
+        listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var listEnvelope = await listResponse.Content.ReadFromJsonAsync<AppointmentsEnvelope>();
+        listEnvelope.Should().NotBeNull();
+        listEnvelope!.Data.Should().NotBeNull();
+        var item = listEnvelope.Data!.Items.Should().ContainSingle().Subject;
+        item.BookingReference.Should().NotBeNullOrEmpty();
+        item.Status.Should().Be("Pending");
+    }
+
+    /// <summary>Typed shape of the paginated appointments envelope.</summary>
+    private sealed class AppointmentsEnvelope
+    {
+        public AppointmentsData? Data { get; set; }
+    }
+
+    private sealed class AppointmentsData
+    {
+        public List<AppointmentListItem> Items { get; set; } = new();
+    }
+
+    private sealed class AppointmentListItem
+    {
+        public Guid Id { get; set; }
+        public string BookingReference { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
     }
 }

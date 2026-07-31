@@ -34,7 +34,7 @@ class _MyBusinessesScreenState extends ConsumerState<MyBusinessesScreen> {
             IconButton(
               icon: const Icon(Icons.add_business_outlined),
               tooltip: 'List a new business',
-              onPressed: () => context.push('/onboarding'),
+              onPressed: () => context.push('/provider-onboarding'),
             ),
           ],
         ),
@@ -115,7 +115,7 @@ class _MyBusinessesScreenState extends ConsumerState<MyBusinessesScreen> {
           width: double.infinity,
           height: 52,
           child: FilledButton.icon(
-            onPressed: () => context.push('/onboarding'),
+            onPressed: () => context.push('/provider-onboarding'),
             icon: const Icon(Icons.add_business_outlined),
             label: const Text('List Your Business'),
           ),

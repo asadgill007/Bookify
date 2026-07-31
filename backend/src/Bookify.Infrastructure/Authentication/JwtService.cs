@@ -22,7 +22,7 @@ public class JwtService : IJwtService
         var jwtSettings = _configuration.GetSection("Jwt");
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var expiresInSeconds = int.Parse(jwtSettings["ExpiresInSeconds"] ?? "900");
+        var expiresInSeconds = int.Parse(jwtSettings["AccessTokenExpirationMinutes"] ?? "15") * 60;
 
         var claims = new[]
         {
@@ -43,12 +43,13 @@ public class JwtService : IJwtService
 
         var accessToken = new JwtSecurityTokenHandler().WriteToken(token);
         var refreshToken = GenerateRefreshToken();
+        var refreshTokenDays = int.Parse(jwtSettings["RefreshTokenExpirationDays"] ?? "7");
 
         var result = new TokenResult
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,
-            RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(7),
+            RefreshTokenExpiresAt = DateTime.UtcNow.AddDays(refreshTokenDays),
             ExpiresInSeconds = expiresInSeconds
         };
 

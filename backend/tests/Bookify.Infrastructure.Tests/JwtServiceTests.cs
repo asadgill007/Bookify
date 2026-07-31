@@ -15,7 +15,7 @@ public class JwtServiceTests
             ["Jwt:Key"] = "ThisIsASecretKeyThatIsAtLeast32BytesLong!ABCD",
             ["Jwt:Issuer"] = "Bookify",
             ["Jwt:Audience"] = "BookifyApp",
-            ["Jwt:ExpiresInSeconds"] = "900"
+            ["Jwt:AccessTokenExpirationMinutes"] = "15"
         };
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(configData)
@@ -75,13 +75,13 @@ public class JwtServiceTests
     [Fact]
     public async Task ValidateTokenAsync_ExpiredToken_ReturnsNull()
     {
-        // Create a config with 0-second expiry
+        // Create a config with 0-minute expiry (token expires immediately)
         var configData = new Dictionary<string, string?>
         {
             ["Jwt:Key"] = "ThisIsASecretKeyThatIsAtLeast32BytesLong!ABCD",
             ["Jwt:Issuer"] = "Bookify",
             ["Jwt:Audience"] = "BookifyApp",
-            ["Jwt:ExpiresInSeconds"] = "0"
+            ["Jwt:AccessTokenExpirationMinutes"] = "0"
         };
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(configData)
