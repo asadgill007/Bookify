@@ -99,6 +99,9 @@ dotnet run
 Migrations live in the canonical `backend/src/Bookify.Infrastructure/Migrations/` folder. When adding a new migration, pin the output folder explicitly (the design-time factory resolves a different default folder in this setup):
 
 ```bash
+# Install the EF tooling once (if not already present)
+dotnet tool install --global dotnet-ef
+
 cd backend/src/Bookify.Infrastructure
 dotnet ef migrations add <Name> --output-dir Migrations --startup-project ../Bookify.WebApi
 ```
