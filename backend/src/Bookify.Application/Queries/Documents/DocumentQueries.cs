@@ -10,17 +10,25 @@ public sealed record DownloadDocumentQuery : IRequest<Result<FileDownloadDto>>
 {
     public Guid DocumentId { get; init; }
     public Guid UserId { get; init; }
+
+    /// <summary>True when the requesting user has the Admin role.</summary>
+    public bool IsAdmin { get; init; }
 }
 
 public sealed class DownloadDocumentQueryHandler : IRequestHandler<DownloadDocumentQuery, Result<FileDownloadDto>>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IFileStorageService _fileStorage;
+    private readonly IPermissionService _permissionService;
 
-    public DownloadDocumentQueryHandler(IUnitOfWork unitOfWork, IFileStorageService fileStorage)
+    public DownloadDocumentQueryHandler(
+        IUnitOfWork unitOfWork,
+        IFileStorageService fileStorage,
+        IPermissionService permissionService)
     {
         _unitOfWork = unitOfWork;
         _fileStorage = fileStorage;
+        _permissionService = permissionService;
     }
 
     public async Task<Result<FileDownloadDto>> Handle(DownloadDocumentQuery request, CancellationToken cancellationToken)
@@ -28,6 +36,19 @@ public sealed class DownloadDocumentQueryHandler : IRequestHandler<DownloadDocum
         var document = await _unitOfWork.Documents.GetByIdAsync(request.DocumentId, cancellationToken);
         if (document == null)
             return Result<FileDownloadDto>.Failure("Document not found.", "NOT_FOUND");
+
+        // Only admins, the business owner, its providers, the uploader, or (for
+        // appointment-linked documents) the appointment's customer may download.
+        var canManageBusiness =
+            await _permissionService.CanManageBusinessAsync(request.UserId, document.BusinessId, cancellationToken);
+        var isProvider =
+            await _permissionService.IsProviderForBusinessAsync(request.UserId, document.BusinessId, cancellationToken);
+        var isUploader = document.UploadedByUserId == request.UserId;
+        var isAppointmentParty = document.AppointmentId.HasValue &&
+            await _permissionService.CanAccessAppointmentAsync(request.UserId, document.AppointmentId.Value, cancellationToken);
+
+        if (!request.IsAdmin && !canManageBusiness && !isProvider && !isUploader && !isAppointmentParty)
+            return Result<FileDownloadDto>.Failure("You do not have permission to download this document.", "FORBIDDEN");
 
         var download = await _fileStorage.DownloadAsync(document.StoragePath, cancellationToken);
 
@@ -46,6 +67,9 @@ public sealed record GetAppointmentDocumentsQuery : IRequest<Result<PaginatedLis
 {
     public Guid AppointmentId { get; init; }
     public Guid UserId { get; init; }
+
+    /// <summary>True when the requesting user has the Admin role.</summary>
+    public bool IsAdmin { get; init; }
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 20;
 }
@@ -53,11 +77,34 @@ public sealed record GetAppointmentDocumentsQuery : IRequest<Result<PaginatedLis
 public sealed class GetAppointmentDocumentsQueryHandler : IRequestHandler<GetAppointmentDocumentsQuery, Result<PaginatedList<DocumentDto>>>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPermissionService _permissionService;
 
-    public GetAppointmentDocumentsQueryHandler(IUnitOfWork unitOfWork) => _unitOfWork = unitOfWork;
+    public GetAppointmentDocumentsQueryHandler(IUnitOfWork unitOfWork, IPermissionService permissionService)
+    {
+        _unitOfWork = unitOfWork;
+        _permissionService = permissionService;
+    }
 
     public async Task<Result<PaginatedList<DocumentDto>>> Handle(GetAppointmentDocumentsQuery request, CancellationToken cancellationToken)
     {
+        // Resolve the appointment to authorize business-level access.
+        var appointment = await _unitOfWork.Appointments.GetByIdAsync(request.AppointmentId, cancellationToken);
+        if (appointment == null)
+            return Result<PaginatedList<DocumentDto>>.Failure("Appointment not found.", "NOT_FOUND");
+
+        var canManageBusiness =
+            await _permissionService.CanManageBusinessAsync(request.UserId, appointment.BusinessId, cancellationToken);
+        var isProvider =
+            await _permissionService.IsProviderForBusinessAsync(request.UserId, appointment.BusinessId, cancellationToken);
+
+        if (!request.IsAdmin
+            && !canManageBusiness
+            && !isProvider
+            && !await _permissionService.CanAccessAppointmentAsync(request.UserId, request.AppointmentId, cancellationToken))
+        {
+            return Result<PaginatedList<DocumentDto>>.Failure("You do not have permission to view these documents.", "FORBIDDEN");
+        }
+
         var documents = await _unitOfWork.Documents.GetByAppointmentIdAsync(
             request.AppointmentId, request.Page, request.PageSize, cancellationToken);
         var total = await _unitOfWork.Documents.GetAppointmentDocumentCountAsync(request.AppointmentId, cancellationToken);
@@ -84,6 +131,9 @@ public sealed record GetBusinessDocumentsQuery : IRequest<Result<PaginatedList<D
 {
     public Guid BusinessId { get; init; }
     public Guid UserId { get; init; }
+
+    /// <summary>True when the requesting user has the Admin role.</summary>
+    public bool IsAdmin { get; init; }
     public DocumentType? TypeFilter { get; init; }
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 20;
@@ -92,11 +142,24 @@ public sealed record GetBusinessDocumentsQuery : IRequest<Result<PaginatedList<D
 public sealed class GetBusinessDocumentsQueryHandler : IRequestHandler<GetBusinessDocumentsQuery, Result<PaginatedList<DocumentDto>>>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPermissionService _permissionService;
 
-    public GetBusinessDocumentsQueryHandler(IUnitOfWork unitOfWork) => _unitOfWork = unitOfWork;
+    public GetBusinessDocumentsQueryHandler(IUnitOfWork unitOfWork, IPermissionService permissionService)
+    {
+        _unitOfWork = unitOfWork;
+        _permissionService = permissionService;
+    }
 
     public async Task<Result<PaginatedList<DocumentDto>>> Handle(GetBusinessDocumentsQuery request, CancellationToken cancellationToken)
     {
+        // Only admins, the business owner, or its providers may list business documents.
+        if (!request.IsAdmin
+            && !await _permissionService.CanManageBusinessAsync(request.UserId, request.BusinessId, cancellationToken)
+            && !await _permissionService.IsProviderForBusinessAsync(request.UserId, request.BusinessId, cancellationToken))
+        {
+            return Result<PaginatedList<DocumentDto>>.Failure("You do not have permission to view documents for this business.", "FORBIDDEN");
+        }
+
         var documents = await _unitOfWork.Documents.GetByBusinessIdAsync(
             request.BusinessId, request.TypeFilter, request.Page, request.PageSize, cancellationToken);
         var total = await _unitOfWork.Documents.GetBusinessDocumentCountAsync(

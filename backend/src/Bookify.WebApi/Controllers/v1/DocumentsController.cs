@@ -57,7 +57,12 @@ public class DocumentsController : ApiController
     [HttpGet("{id}/download")]
     public async Task<IActionResult> Download(Guid id, CancellationToken cancellationToken)
     {
-        var query = new DownloadDocumentQuery { DocumentId = id, UserId = GetUserId() };
+        var query = new DownloadDocumentQuery
+        {
+            DocumentId = id,
+            UserId = GetUserId(),
+            IsAdmin = User.IsInRole("Admin")
+        };
         var result = await _mediator.Send(query, cancellationToken);
 
         if (!result.IsSuccess || result.Data == null)
@@ -74,6 +79,7 @@ public class DocumentsController : ApiController
         {
             AppointmentId = appointmentId,
             UserId = GetUserId(),
+            IsAdmin = User.IsInRole("Admin"),
             Page = page,
             PageSize = pageSize
         };
@@ -93,6 +99,7 @@ public class DocumentsController : ApiController
         {
             BusinessId = businessId,
             UserId = GetUserId(),
+            IsAdmin = User.IsInRole("Admin"),
             TypeFilter = typeFilter,
             Page = page,
             PageSize = pageSize
