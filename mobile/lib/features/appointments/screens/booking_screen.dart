@@ -4,6 +4,25 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../business/providers/business_detail_provider.dart';
+import '../../recurring/providers/recurring_bookings_provider.dart';
+import '../../waitlist/providers/waitlist_provider.dart';
+
+/// Recurrence options chosen on the booking screen (null = one-off booking).
+class RecurrenceChoice {
+  final int type; // RecurrenceTypeValue: 1=weekly, 2=monthly
+  final int interval;
+  final int? maxOccurrences;
+  final DateTime? endDate;
+
+  const RecurrenceChoice({
+    required this.type,
+    this.interval = 1,
+    this.maxOccurrences,
+    this.endDate,
+  });
+
+  bool get isMonthly => type == RecurrenceTypeValue.monthly;
+}
 
 /// Booking draft passed from booking screen to checkout.
 class BookingDraft {
@@ -18,6 +37,7 @@ class BookingDraft {
   final String providerName;
   final DateTime startTime;
   final DateTime endTime;
+  final RecurrenceChoice? recurrence;
 
   const BookingDraft({
     required this.businessId,
@@ -31,6 +51,7 @@ class BookingDraft {
     required this.providerName,
     required this.startTime,
     required this.endTime,
+    this.recurrence,
   });
 }
 
@@ -56,6 +77,20 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   String _selectedServiceId = '';
   final _notesController = TextEditingController();
 
+  // Recurring booking state
+  bool _isRecurring = false;
+  int _recurrenceType = RecurrenceTypeValue.weekly;
+  int _recurrenceInterval = 1;
+  int _maxOccurrences = 6;
+  DateTime? _seriesEndDate;
+  bool _useEndDate = false;
+
+  // Waitlist state
+  bool _joiningWaitlist = false;
+  String? _waitlistError;
+  TimeOfDay? _preferredTime;
+  String? _waitlistResult;
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +110,60 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
+
+  Future<void> _joinWaitlist(
+      BusinessDetail business, String serviceId, String providerId) async {
+    if (_joiningWaitlist) return;
+    setState(() {
+      _joiningWaitlist = true;
+      _waitlistError = null;
+      _waitlistResult = null;
+    });
+    try {
+      final api = ref.read(waitlistApiProvider);
+      final preferred = _preferredTime;
+      final result = await api.join(
+        businessId: business.id,
+        providerId: providerId,
+        serviceId: serviceId,
+        appointmentDate: _formatDateParam(_selectedDate),
+        preferredStartTime: preferred != null
+            ? '${preferred.hour.toString().padLeft(2, '0')}:'
+                '${preferred.minute.toString().padLeft(2, '0')}'
+            : null,
+        preferredEndTime: preferred != null
+            ? '${(preferred.hour + 1).toString().padLeft(2, '0')}:'
+                '${preferred.minute.toString().padLeft(2, '0')}'
+            : null,
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _joiningWaitlist = false;
+        _waitlistResult =
+            'You are #${result.position} in the waitlist. We will notify you '
+            'if this slot becomes available.';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _joiningWaitlist = false;
+        _waitlistError = 'Could not join the waitlist. Please try again.';
+      });
+    }
+  }
+
+  Future<void> _pickPreferredTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _preferredTime ?? const TimeOfDay(hour: 9, minute: 0),
+    );
+    if (picked != null) {
+      setState(() => _preferredTime = picked);
+    }
+  }
 
   void _goToCheckout(BusinessDetail business, String serviceId, String providerId) {
     if (business.services.isEmpty || business.providers.isEmpty) {
@@ -111,6 +200,14 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
       providerName: provider.fullName,
       startTime: start,
       endTime: start.add(Duration(minutes: service.durationMinutes)),
+      recurrence: _isRecurring
+          ? RecurrenceChoice(
+              type: _recurrenceType,
+              interval: _recurrenceInterval,
+              maxOccurrences: _useEndDate ? null : _maxOccurrences,
+              endDate: _useEndDate ? _seriesEndDate : null,
+            )
+          : null,
     );
     context.push('/checkout', extra: draft);
   }
@@ -474,12 +571,189 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                                       .where((s) => s.isAvailable)
                                       .toList();
                                   if (available.isEmpty) {
-                                    return const SliverToBoxAdapter(
+                                    // No slots: offer the waitlist.
+                                    return SliverToBoxAdapter(
                                       child: Padding(
-                                        padding: EdgeInsets.all(24),
-                                        child: Center(
-                                          child: Text(
-                                              'No available slots on this day.'),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 8),
+                                        child: GlassContainer(
+                                          borderRadius: AppTheme.radiusLg,
+                                          padding: const EdgeInsets.all(16),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Icon(Icons.hourglass_top,
+                                                      color:
+                                                          AppTheme.indigoLuxury,
+                                                      size: 20),
+                                                  const SizedBox(width: 8),
+                                                  Text('Fully booked? Join the waitlist',
+                                                      style: theme.textTheme
+                                                          .titleSmall
+                                                          ?.copyWith(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600)),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Text(
+                                                'No slots are available on this '
+                                                'day. Join the waitlist and we\'ll '
+                                                'notify you if one opens up.',
+                                                style: theme.textTheme.bodySmall
+                                                    ?.copyWith(
+                                                        color: colorScheme
+                                                            .onSurfaceVariant),
+                                              ),
+                                              const SizedBox(height: 12),
+                                              // Preferred time picker
+                                              InkWell(
+                                                onTap: _pickPreferredTime,
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(12),
+                                                  decoration: BoxDecoration(
+                                                    color: AppTheme.indigoLuxury
+                                                        .withValues(alpha: 0.08),
+                                                    borderRadius: BorderRadius
+                                                        .circular(12),
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      const Icon(
+                                                          Icons.schedule,
+                                                          size: 18,
+                                                          color: AppTheme
+                                                              .indigoLuxury),
+                                                      const SizedBox(width: 8),
+                                                      Text(
+                                                        _preferredTime != null
+                                                            ? 'Preferred time: '
+                                                                '${_formatTimeOfDay(_preferredTime!)}'
+                                                            : 'Choose a preferred time (optional)',
+                                                        style: theme.textTheme
+                                                            .bodySmall
+                                                            ?.copyWith(
+                                                                color: _preferredTime !=
+                                                                        null
+                                                                    ? colorScheme
+                                                                        .onSurface
+                                                                    : colorScheme
+                                                                        .onSurfaceVariant),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                              if (_waitlistError != null) ...[
+                                                const SizedBox(height: 10),
+                                                Text(
+                                                  _waitlistError!,
+                                                  style: theme.textTheme.bodySmall
+                                                      ?.copyWith(
+                                                          color: colorScheme
+                                                              .error),
+                                                ),
+                                              ],
+                                              if (_waitlistResult != null) ...[
+                                                const SizedBox(height: 10),
+                                                Container(
+                                                  padding: const EdgeInsets.all(10),
+                                                  decoration: BoxDecoration(
+                                                    color: AppTheme.success
+                                                        .withValues(alpha: 0.12),
+                                                    borderRadius:
+                                                        BorderRadius.circular(10),
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      const Icon(
+                                                          Icons.check_circle,
+                                                          color:
+                                                              AppTheme.success,
+                                                          size: 18),
+                                                      const SizedBox(width: 8),
+                                                      Expanded(
+                                                        child: Text(
+                                                          _waitlistResult!,
+                                                          style: theme
+                                                              .textTheme
+                                                              .bodySmall
+                                                              ?.copyWith(
+                                                                  color: AppTheme
+                                                                      .success),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                              const SizedBox(height: 12),
+                                              SizedBox(
+                                                width: double.infinity,
+                                                height: 44,
+                                                child: DecoratedBox(
+                                                  decoration: BoxDecoration(
+                                                    gradient: LinearGradient(
+                                                      colors: [
+                                                        AppTheme.indigoLuxury,
+                                                        const Color(0xFF7C3AED),
+                                                      ],
+                                                      begin: Alignment.topLeft,
+                                                      end: Alignment.bottomRight,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            AppTheme
+                                                                .radiusFull),
+                                                  ),
+                                                  child: MaterialButton(
+                                                    onPressed:
+                                                        _joiningWaitlist ||
+                                                                _waitlistResult !=
+                                                                    null
+                                                            ? null
+                                                            : () => _joinWaitlist(
+                                                                  business,
+                                                                  effectiveServiceId,
+                                                                  effectiveProviderId!,
+                                                                ),
+                                                    shape: RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                                AppTheme
+                                                                    .radiusFull)),
+                                                    child: _joiningWaitlist
+                                                        ? const SizedBox(
+                                                            width: 20,
+                                                            height: 20,
+                                                            child:
+                                                                CircularProgressIndicator(
+                                                                    color: Colors
+                                                                        .white,
+                                                                    strokeWidth:
+                                                                        2),
+                                                          )
+                                                        : const Text(
+                                                            'Join Waitlist',
+                                                            style: TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontSize: 14,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600),
+                                                          ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     );
@@ -556,6 +830,161 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                                 },
                               ),
                       ),
+
+                      // Make this recurring
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text('Make this recurring',
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
+                                            fontWeight: FontWeight.w700)),
+                              ),
+                              Switch(
+                                value: _isRecurring,
+                                activeTrackColor: AppTheme.indigoLuxury,
+                                onChanged: (v) => setState(() => _isRecurring = v),
+                              ),
+                            ],
+                          ),
+                        ).animate().fadeIn(duration: 400.ms, delay: 500.ms),
+                      ),
+                      if (_isRecurring) ...[
+                        // Recurrence pattern
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: GlassContainer(
+                              borderRadius: AppTheme.radiusLg,
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Repeats',
+                                      style: theme.textTheme.titleSmall
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.w600)),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      _patternChip(
+                                        label: 'Weekly',
+                                        selected:
+                                            _recurrenceType ==
+                                                    RecurrenceTypeValue.weekly &&
+                                                _recurrenceInterval == 1,
+                                        onTap: () => setState(() {
+                                          _recurrenceType =
+                                              RecurrenceTypeValue.weekly;
+                                          _recurrenceInterval = 1;
+                                        }),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      _patternChip(
+                                        label: 'Bi-weekly',
+                                        selected:
+                                            _recurrenceType ==
+                                                RecurrenceTypeValue.weekly &&
+                                                _recurrenceInterval == 2,
+                                        onTap: () => setState(() {
+                                          _recurrenceType =
+                                              RecurrenceTypeValue.weekly;
+                                          _recurrenceInterval = 2;
+                                        }),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      _patternChip(
+                                        label: 'Monthly',
+                                        selected:
+                                            _recurrenceType ==
+                                                RecurrenceTypeValue.monthly,
+                                        onTap: () => setState(() {
+                                          _recurrenceType =
+                                              RecurrenceTypeValue.monthly;
+                                          _recurrenceInterval = 1;
+                                        }),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Text('Ends',
+                                      style: theme.textTheme.titleSmall
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.w600)),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _endOptionChip(
+                                          label: 'After $_maxOccurrences times',
+                                          selected: !_useEndDate,
+                                          onTap: () => setState(
+                                              () => _useEndDate = false),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: _endOptionChip(
+                                          label: _seriesEndDate != null
+                                              ? 'On date'
+                                              : 'End date',
+                                          selected: _useEndDate,
+                                          onTap: _seriesEndDate == null
+                                              ? _pickSeriesEndDate
+                                              : () => setState(
+                                                  () => _useEndDate = true),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (!_useEndDate) ...[
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        _stepButton(
+                                          icon: Icons.remove,
+                                          onTap: () => setState(() {
+                                            if (_maxOccurrences > 2) {
+                                              _maxOccurrences -= 1;
+                                            }
+                                          }),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text('$_maxOccurrences',
+                                            style: theme.textTheme.titleMedium
+                                                ?.copyWith(
+                                                    fontWeight:
+                                                        FontWeight.w700)),
+                                        const SizedBox(width: 12),
+                                        _stepButton(
+                                          icon: Icons.add,
+                                          onTap: () => setState(() {
+                                            if (_maxOccurrences < 52) {
+                                              _maxOccurrences += 1;
+                                            }
+                                          }),
+                                        ),
+                                      ],
+                                    ),
+                                  ] else if (_seriesEndDate != null) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Series ends ${_formatSeriesDate(_seriesEndDate!)}',
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                              color: AppTheme.indigoLuxury,
+                                              fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
 
                       // Notes
                       SliverToBoxAdapter(
@@ -656,6 +1085,116 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
             );
           },
         ),
+      ),
+    );
+  }
+
+  Future<void> _pickSeriesEndDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate.add(const Duration(days: 30)),
+      firstDate: _selectedDate,
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() {
+        _seriesEndDate = picked;
+        _useEndDate = true;
+      });
+    }
+  }
+
+  String _formatSeriesDate(DateTime d) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${d.day} ${months[d.month - 1]} ${d.year}';
+  }
+
+  String _formatTimeOfDay(TimeOfDay t) {
+    final period = t.hour >= 12 ? 'PM' : 'AM';
+    final hr = t.hour % 12 == 0 ? 12 : t.hour % 12;
+    return '$hr:${t.minute.toString().padLeft(2, '0')} $period';
+  }
+
+  Widget _patternChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: 200.ms,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+          gradient: selected
+              ? LinearGradient(
+                  colors: [AppTheme.indigoLuxury, const Color(0xFF7C3AED)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: selected ? null : AppTheme.indigoLuxury.withValues(alpha: 0.1),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? Colors.white : AppTheme.indigoLuxury,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _endOptionChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: 200.ms,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+          border: Border.all(
+            color: selected ? AppTheme.indigoLuxury : AppTheme.glassStrokeDark,
+            width: selected ? 2 : 1,
+          ),
+          color: selected
+              ? AppTheme.indigoLuxury.withValues(alpha: 0.1)
+              : Colors.transparent,
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: selected ? AppTheme.indigoLuxury : null,
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _stepButton({required IconData icon, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: AppTheme.indigoLuxury.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, size: 18, color: AppTheme.indigoLuxury),
       ),
     );
   }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../reviews/screens/review_form_screen.dart';
 
 /// Appointment model from the backend API.
 class Appointment {
@@ -63,6 +65,24 @@ final appointmentsProvider = FutureProvider<List<Appointment>>((ref) async {
 class AppointmentsScreen extends ConsumerWidget {
   const AppointmentsScreen({super.key});
 
+  bool _isCompleted(String status) {
+    final s = status.toLowerCase();
+    return s == 'completed' || s == 'noshow';
+  }
+
+  void _openReviewFlow(BuildContext context, Appointment apt) {
+    // Fetch business name for the review header via a lightweight call is
+    // unnecessary: the appointment already carries businessName.
+    Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ReviewFormScreen(
+          appointmentId: apt.id,
+          businessName: apt.businessName,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -115,30 +135,67 @@ class AppointmentsScreen extends ConsumerWidget {
             itemCount: appointments.length,
             itemBuilder: (context, index) {
               final apt = appointments[index];
+              final canReview = _isCompleted(apt.status);
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  title: Text(apt.businessName,
-                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 4),
-                      Text('Ref: ${apt.bookingReference}'),
-                      Text('${apt.startTime.day}/${apt.startTime.month}/${apt.startTime.year}'),
-                      Text('${apt.totalAmount.toStringAsFixed(2)} ${apt.currency}'),
-                    ],
-                  ),
-                  trailing: Chip(
-                    label: Text(apt.status,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                            color: apt.status == 'Confirmed' ? Colors.green : colorScheme.onSurface)),
-                    backgroundColor: apt.status == 'Confirmed'
-                        ? Colors.green.shade50
-                        : colorScheme.surfaceContainerHighest,
-                  ),
-                  isThreeLine: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      title: Text(apt.businessName,
+                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text('Ref: ${apt.bookingReference}'),
+                          Text('${apt.startTime.day}/${apt.startTime.month}/${apt.startTime.year}'),
+                          Text('${apt.totalAmount.toStringAsFixed(2)} ${apt.currency}'),
+                        ],
+                      ),
+                      trailing: Chip(
+                        label: Text(apt.status,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                                color: apt.status == 'Confirmed' ? Colors.green : colorScheme.onSurface)),
+                        backgroundColor: apt.status == 'Confirmed'
+                            ? Colors.green.shade50
+                            : colorScheme.surfaceContainerHighest,
+                      ),
+                      isThreeLine: true,
+                    ),
+                    if (canReview)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 40,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppTheme.indigoLuxury,
+                                  const Color(0xFF7C3AED),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+                            ),
+                            child: MaterialButton(
+                              onPressed: () => _openReviewFlow(context, apt),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppTheme.radiusFull)),
+                              child: const Text('Write a Review',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600)),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               );
             },

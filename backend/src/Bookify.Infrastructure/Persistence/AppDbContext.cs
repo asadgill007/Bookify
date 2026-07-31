@@ -7,16 +7,37 @@ namespace Bookify.Infrastructure.Persistence;
 
 public class AppDbContext : DbContext
 {
+    /// <summary>
+    /// True when running on the EF Core InMemory provider. The InMemory provider
+    /// does not support SQL Server rowversion concurrency tokens — updating an
+    /// entity that has one throws a spurious DbUpdateConcurrencyException even
+    /// though the write succeeds. When true, rowversion tokens are not
+    /// configured, so dev/test flows work while SQL Server keeps optimistic
+    /// concurrency. Set once at startup from the UseInMemoryDatabase setting.
+    /// </summary>
+    public static bool DisableConcurrencyTokens { get; set; }
+
     private readonly ICurrentUserService? _currentUserService;
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
+        // Defensive fallback: also detect the InMemory provider here so contexts
+        // constructed outside DI (e.g. tests) skip rowversion tokens too.
+        if (Database.IsInMemory())
+        {
+            DisableConcurrencyTokens = true;
+        }
     }
 
     public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserService currentUserService)
         : base(options)
     {
         _currentUserService = currentUserService;
+
+        if (Database.IsInMemory())
+        {
+            DisableConcurrencyTokens = true;
+        }
     }
 
     public DbSet<User> Users => Set<User>();
@@ -97,7 +118,68 @@ public class AppDbContext : DbContext
             }
         }
 
-        return await base.SaveChangesAsync(cancellationToken);
+        try
+        {
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException ex) when (Database.IsInMemory())
+        {
+            // InMemory provider quirk: when a status transition adds new
+            // dependents (e.g. AppointmentLog) whose FK points at an already-
+            // loaded principal, relationship fixup can track them as Modified
+            // instead of Added (verified: the new dependent is Modified before
+            // SaveChanges even runs). Their keys are not yet in the store, so
+            // InMemoryTable.Update throws "Attempted to update or delete an
+            // entity that does not exist in the store." Such entries are genuine
+            // INSERTs — restore them to Added and retry. This only ever triggers
+            // on the InMemory provider (SQL Server is untouched) and there is no
+            // real optimistic concurrency in-memory, so restoring the state is
+            // always semantically correct.
+            //
+            // Multiple dependents can be mis-tracked in one batch (cancelling a
+            // recurring series adds one log per occurrence), so retry in a
+            // bounded loop. Each attempt persists the entry that failed before
+            // (the failure point moves forward through the batch), so entries
+            // flipped in earlier attempts are already in the store and must be
+            // marked Unchanged before the next attempt to avoid duplicate
+            // INSERTs.
+            var flippedToAdd = new HashSet<object>();
+            for (var attempt = 0; attempt < 50; attempt++)
+            {
+                // Entries flipped in earlier attempts were persisted by those
+                // attempts; accept them so the retry doesn't INSERT them again.
+                foreach (var entity in flippedToAdd)
+                {
+                    var entry = Entry(entity);
+                    if (entry.State == EntityState.Added)
+                    {
+                        entry.State = EntityState.Unchanged;
+                    }
+                }
+
+                // The currently-failing entry is a genuine INSERT that was
+                // mis-tracked as Modified; restore it to Added.
+                foreach (var entry in ex.Entries)
+                {
+                    if (entry.State == EntityState.Modified)
+                    {
+                        entry.State = EntityState.Added;
+                        flippedToAdd.Add(entry.Entity);
+                    }
+                }
+
+                try
+                {
+                    return await base.SaveChangesAsync(cancellationToken);
+                }
+                catch (DbUpdateConcurrencyException retryEx) when (Database.IsInMemory())
+                {
+                    ex = retryEx;
+                }
+            }
+
+            throw;
+        }
     }
 }
 

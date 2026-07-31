@@ -45,7 +45,8 @@ public class WaitlistRepository : BaseRepository<WaitlistEntry>, IWaitlistReposi
             .Include(w => w.Provider).ThenInclude(p => p.User)
             .Include(w => w.Service)
             .Include(w => w.Business)
-            .Where(w => w.CustomerId == customerId)
+            .Where(w => w.CustomerId == customerId
+                     && (w.Status == WaitlistStatus.Waiting || w.Status == WaitlistStatus.Notified))
             .OrderByDescending(w => w.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -53,7 +54,8 @@ public class WaitlistRepository : BaseRepository<WaitlistEntry>, IWaitlistReposi
     }
 
     public async Task<int> GetCustomerWaitlistCountAsync(Guid customerId, CancellationToken cancellationToken = default)
-        => await DbSet.CountAsync(w => w.CustomerId == customerId, cancellationToken);
+        => await DbSet.CountAsync(w => w.CustomerId == customerId
+                                    && (w.Status == WaitlistStatus.Waiting || w.Status == WaitlistStatus.Notified), cancellationToken);
 
     public async Task<IReadOnlyList<WaitlistEntry>> GetPendingEntriesAsync(Guid providerId, DateOnly date, CancellationToken cancellationToken = default)
     {

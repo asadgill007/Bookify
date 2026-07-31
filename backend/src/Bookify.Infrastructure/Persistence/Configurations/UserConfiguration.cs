@@ -60,10 +60,14 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasMaxLength(3)
             .HasDefaultValue("USD");
 
-        // Concurrency token (RowVersion)
-        builder.Property<byte[]>("RowVersion")
-            .IsRowVersion()
-            .IsConcurrencyToken();
+        // Concurrency token (RowVersion) — skipped on the InMemory provider,
+        // which does not support rowversion tokens (see AppDbContext).
+        if (!AppDbContext.DisableConcurrencyTokens)
+        {
+            builder.Property<byte[]>("RowVersion")
+                .IsRowVersion()
+                .IsConcurrencyToken();
+        }
 
         // Audit fields
         builder.Property(u => u.CreatedAt)

@@ -20,6 +20,8 @@ import '../../features/appointments/screens/booking_screen.dart';
 import '../../features/appointments/screens/checkout_screen.dart';
 import '../../features/appointments/screens/confirmation_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
+import '../../features/recurring/screens/my_recurring_bookings_screen.dart';
+import '../../features/waitlist/screens/my_waitlist_screen.dart';
 import '../../features/provider/screens/provider_onboarding_screen.dart';
 import '../../features/provider/screens/my_businesses_screen.dart';
 import '../../features/admin/screens/admin_review_screen.dart';
@@ -64,6 +66,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         '/my-business',
         '/provider-onboarding',
         '/admin/review',
+        '/my-waitlist',
+        '/my-recurring',
       ];
 
       final isProtectedRoute = protectedRoutes.any(
@@ -191,6 +195,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/notifications',
         name: 'notifications',
         builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: '/my-waitlist',
+        name: 'my-waitlist',
+        builder: (context, state) => const MyWaitlistScreen(),
+      ),
+      GoRoute(
+        path: '/my-recurring',
+        name: 'my-recurring',
+        builder: (context, state) => const MyRecurringBookingsScreen(),
       ),
       GoRoute(
         path: '/help',

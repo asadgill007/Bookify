@@ -119,10 +119,14 @@ public class BusinessConfiguration : IEntityTypeConfiguration<Business>
         builder.ToTable(t => t.HasCheckConstraint("CK_Businesses_TotalReviews",
             "[TotalReviews] >= 0"));
 
-        // Concurrency token
-        builder.Property<byte[]>("RowVersion")
-            .IsRowVersion()
-            .IsConcurrencyToken();
+        // Concurrency token (RowVersion) — skipped on the InMemory provider,
+        // which does not support rowversion tokens (see AppDbContext).
+        if (!AppDbContext.DisableConcurrencyTokens)
+        {
+            builder.Property<byte[]>("RowVersion")
+                .IsRowVersion()
+                .IsConcurrencyToken();
+        }
 
         // Audit fields
         builder.Property(b => b.IsDeleted)

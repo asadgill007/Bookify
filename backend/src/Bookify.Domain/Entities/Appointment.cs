@@ -20,6 +20,7 @@ public sealed class Appointment : BaseEntity
     public string Currency { get; private set; } = null!;
     public string? CancellationReason { get; private set; }
     public Guid? RescheduledFromId { get; private set; }
+    public Guid? RecurringBookingId { get; private set; }
 
     public User Customer { get; private set; } = null!;
     public Provider Provider { get; private set; } = null!;
@@ -166,6 +167,15 @@ public sealed class Appointment : BaseEntity
     public void SetNotes(string? notes)
     {
         CustomerNotes = notes?.Trim();
+        Touch();
+    }
+
+    /// <summary>
+    /// Links this appointment to the recurring booking series that generated it.
+    /// </summary>
+    public void AttachToRecurringSeries(Guid recurringBookingId)
+    {
+        RecurringBookingId = recurringBookingId;
         Touch();
     }
 

@@ -162,6 +162,12 @@ class ProfileScreen extends ConsumerWidget {
                           const Divider(height: 1),
                           _buildMenuItem(Icons.calendar_month_outlined, 'My Appointments', () => context.push('/appointments')),
                           const Divider(height: 1),
+                          _buildMenuItem(Icons.hourglass_bottom, 'My Waitlist',
+                              () => context.push('/my-waitlist')),
+                          const Divider(height: 1),
+                          _buildMenuItem(Icons.repeat, 'Recurring Bookings',
+                              () => context.push('/my-recurring')),
+                          const Divider(height: 1),
                           if (authState.role == 'BusinessOwner' ||
                               authState.role == 'Provider')
                             _buildMenuItem(Icons.storefront_outlined, 'My Business',

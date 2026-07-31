@@ -48,15 +48,18 @@ public sealed class CreateRecurringBookingCommandHandler : IRequestHandler<Creat
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly INotificationService _notificationService;
+    private readonly IRecurringBookingGeneratorService _recurringGenerator;
     private readonly ILogger<CreateRecurringBookingCommandHandler> _logger;
 
     public CreateRecurringBookingCommandHandler(
         IUnitOfWork unitOfWork,
         INotificationService notificationService,
+        IRecurringBookingGeneratorService recurringGenerator,
         ILogger<CreateRecurringBookingCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _notificationService = notificationService;
+        _recurringGenerator = recurringGenerator;
         _logger = logger;
     }
 
@@ -148,6 +151,20 @@ public sealed class CreateRecurringBookingCommandHandler : IRequestHandler<Creat
         await _unitOfWork.RecurringBookings.AddAsync(booking, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        // Materialize the upcoming occurrences immediately so the series is
+        // visible right away (the daily background job tops up later dates).
+        try
+        {
+            await _recurringGenerator.GenerateAppointmentsForSeriesAsync(
+                booking.Id,
+                upTo: DateTime.UtcNow.AddDays(30),
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate initial occurrences for recurring series {Id}", booking.Id);
+        }
+
         _logger.LogInformation(
             "Recurring booking created: Type={RecurrenceType}, Provider={ProviderId}, Customer={CustomerId}, Start={SeriesStartDate}",
             request.RecurrenceType, request.ProviderId, request.CustomerId, request.SeriesStartDate);
@@ -193,9 +210,20 @@ public sealed class CancelRecurringSeriesCommandHandler : IRequestHandler<Cancel
             return Result.Failure("Recurring booking not found.", "NOT_FOUND");
 
         booking.CancelSeries();
+
+        // Cancel all future occurrences that were generated from this series.
+        var futureAppointments = await _unitOfWork.Appointments.GetFutureByRecurringBookingAsync(
+            request.RecurringBookingId, cancellationToken);
+        foreach (var appointment in futureAppointments)
+        {
+            appointment.Cancel("Recurring series cancelled");
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Recurring series {Id} cancelled by user {UserId}", request.RecurringBookingId, request.UserId);
+        _logger.LogInformation(
+            "Recurring series {Id} cancelled by user {UserId} ({Count} future occurrences cancelled)",
+            request.RecurringBookingId, request.UserId, futureAppointments.Count);
 
         await _notificationService.SendNotificationAsync(
             booking.CustomerId,

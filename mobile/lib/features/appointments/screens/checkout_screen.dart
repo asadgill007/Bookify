@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../recurring/providers/recurring_bookings_provider.dart';
 import 'booking_screen.dart';
 
 /// Appointment result returned by the backend.
@@ -237,6 +238,41 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     });
     try {
       final api = ref.read(apiClientProvider);
+
+      // Recurring booking: create the series, not a single appointment.
+      if (draft.recurrence != null) {
+        final rec = draft.recurrence!;
+        final recurringApi = ref.read(recurringBookingsApiProvider);
+        final seriesStart = draft.startTime;
+        await recurringApi.create(
+          providerId: draft.providerId,
+          serviceId: draft.serviceId,
+          businessId: draft.businessId,
+          recurrenceType: rec.type,
+          startTime: _timeOnly(draft.startTime),
+          endTime: _timeOnly(draft.endTime),
+          seriesStartDate: seriesStart,
+          maxOccurrences: rec.maxOccurrences,
+          seriesEndDate: rec.endDate,
+          interval: rec.interval,
+          notes: null,
+        );
+
+        final result = AppointmentResult(
+          id: '',
+          bookingReference: 'RECURRING',
+          status: 'Confirmed',
+          startTime: draft.startTime,
+          endTime: draft.endTime,
+          totalAmount: draft.price * (rec.maxOccurrences ?? 1),
+          currency: draft.currency,
+          serviceName: draft.serviceName,
+        );
+        if (!mounted) return;
+        context.pushReplacement('/confirmation', extra: result);
+        return;
+      }
+
       final response = await api.post(
         ApiConstants.appointments,
         data: {
@@ -261,6 +297,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         _error = 'Booking failed. Please try another time slot. $e';
       });
     }
+  }
+
+  String _timeOnly(DateTime dt) {
+    return '${dt.hour.toString().padLeft(2, '0')}:'
+        '${dt.minute.toString().padLeft(2, '0')}:00';
   }
 
   String _formatTime(DateTime dt) {

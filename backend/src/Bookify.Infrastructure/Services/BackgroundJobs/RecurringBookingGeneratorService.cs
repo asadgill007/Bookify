@@ -56,6 +56,12 @@ public class RecurringBookingGeneratorService : IRecurringBookingGeneratorServic
         var expectedDates = CalculateExpectedDates(series, endDate);
         var generatedCount = 0;
 
+        // Load the service explicitly (the base GetByIdAsync does not include
+        // navigations) so generated occurrences carry the correct price.
+        var service = await _unitOfWork.Services.GetByIdAsync(series.ServiceId, cancellationToken);
+        var priceAmount = service?.PriceAmount ?? 0;
+        var priceCurrency = service?.PriceCurrency ?? "USD";
+
         foreach (var date in expectedDates)
         {
             try
@@ -90,8 +96,12 @@ public class RecurringBookingGeneratorService : IRecurringBookingGeneratorServic
                     series.BusinessId,
                     startDateTime,
                     endDateTime,
-                    series.Service?.PriceAmount ?? 0,
-                    series.Service?.PriceCurrency ?? "USD");
+                    priceAmount,
+                    priceCurrency);
+
+                // Link the generated occurrence back to its recurring series
+                // so future occurrences can be cancelled when the series is cancelled.
+                appointment.AttachToRecurringSeries(series.Id);
 
                 await _unitOfWork.Appointments.AddAsync(appointment, cancellationToken);
                 series.IncrementOccurrencesCreated();

@@ -51,10 +51,14 @@ public class AppointmentConfiguration : IEntityTypeConfiguration<Appointment>
         builder.ToTable(t => t.HasCheckConstraint("CK_Appointments_TotalAmount",
             "[TotalAmount] >= 0"));
 
-        // Concurrency token
-        builder.Property<byte[]>("RowVersion")
-            .IsRowVersion()
-            .IsConcurrencyToken();
+        // Concurrency token (RowVersion) — skipped on the InMemory provider,
+        // which does not support rowversion tokens (see AppDbContext).
+        if (!AppDbContext.DisableConcurrencyTokens)
+        {
+            builder.Property<byte[]>("RowVersion")
+                .IsRowVersion()
+                .IsConcurrencyToken();
+        }
 
         // Audit fields
         builder.Property(a => a.IsDeleted)
@@ -87,6 +91,13 @@ public class AppointmentConfiguration : IEntityTypeConfiguration<Appointment>
             .HasForeignKey(a => a.RescheduledFromId)
             .IsRequired(false)
             .OnDelete(DeleteBehavior.NoAction);
+
+        // Recurring series link (nullable — set only for generated occurrences)
+        builder.Property(a => a.RecurringBookingId)
+            .IsRequired(false);
+
+        builder.HasIndex(a => a.RecurringBookingId)
+            .HasDatabaseName("IX_Appointments_RecurringBookingId");
 
         builder.HasMany(a => a.Logs)
             .WithOne(l => l.Appointment)

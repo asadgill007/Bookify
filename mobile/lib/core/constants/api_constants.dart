@@ -75,6 +75,41 @@ class ApiConstants {
   // ── Review endpoints ──
   static const String reviews = '/reviews';
 
+  /// POST create review for a completed appointment: /reviews/appointments/{appointmentId}
+  static String reviewByAppointment(String appointmentId) =>
+      '/reviews/appointments/$appointmentId';
+
+  /// GET reviews for a business: /reviews?businessId={businessId}&page=&pageSize=
+  static String businessReviews(String businessId) =>
+      '/reviews?businessId=$businessId';
+
+  /// PUT update / DELETE own review: /reviews/{reviewId}
+  static String reviewById(String reviewId) => '/reviews/$reviewId';
+
+  /// POST vote helpful: /reviews/{reviewId}/vote
+  static String reviewVote(String reviewId) => '/reviews/$reviewId/vote';
+
+  /// POST report review: /reviews/{reviewId}/report
+  static String reviewReport(String reviewId) => '/reviews/$reviewId/report';
+
+  // ── Waitlist endpoints ──
+  static const String waitlistJoin = '/waitlist/join';
+
+  /// GET my waitlist entries: /waitlist/my
+  static const String myWaitlist = '/waitlist/my';
+
+  /// DELETE leave waitlist / PUT cancel: /waitlist/{entryId}
+  static String waitlistEntry(String entryId) => '/waitlist/$entryId';
+
+  // ── Recurring booking endpoints ──
+  static const String recurringBookings = '/recurringbookings';
+
+  /// PUT cancel a recurring series: /recurringbookings/{id}/cancel
+  static String recurringCancel(String id) => '/recurringbookings/$id/cancel';
+
+  /// PUT skip next occurrence: /recurringbookings/{id}/skip-next
+  static String recurringSkipNext(String id) => '/recurringbookings/$id/skip-next';
+
   // ── Notification endpoints ──
   static const String notifications = '/notifications';
 

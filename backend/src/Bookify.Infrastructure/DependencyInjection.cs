@@ -19,6 +19,12 @@ public static class DependencyInjection
     {
         // Database — use InMemory for testing when configured, otherwise SQL Server
         var useInMemory = configuration.GetValue<bool>("UseInMemoryDatabase");
+
+        // The EF Core InMemory provider does not support rowversion concurrency
+        // tokens (updates throw a spurious DbUpdateConcurrencyException). Skip
+        // configuring them when InMemory; SQL Server keeps optimistic concurrency.
+        AppDbContext.DisableConcurrencyTokens = useInMemory;
+
         if (useInMemory)
         {
             services.AddDbContext<AppDbContext>(options =>

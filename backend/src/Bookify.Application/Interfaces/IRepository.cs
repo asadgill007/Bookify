@@ -134,6 +134,9 @@ public interface IAppointmentRepository : IRepository<Domain.Entities.Appointmen
         CancellationToken cancellationToken = default);
     Task<int> GetCountAsync(Domain.Enums.AppointmentStatus? statusFilter = null, CancellationToken cancellationToken = default);
     Task<decimal> GetCompletedRevenueAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Domain.Entities.Appointment>> GetFutureByRecurringBookingAsync(
+        Guid recurringBookingId,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IReviewRepository : IRepository<Domain.Entities.Review>

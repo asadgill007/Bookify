@@ -159,4 +159,18 @@ public class AppointmentRepository : BaseRepository<Appointment>, IAppointmentRe
             .Where(a => a.Status == AppointmentStatus.Completed)
             .SumAsync(a => a.TotalAmount, cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Appointment>> GetFutureByRecurringBookingAsync(
+        Guid recurringBookingId,
+        CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        return await DbSet
+            .Where(a => a.RecurringBookingId == recurringBookingId
+                     && a.StartTime > now
+                     && a.Status != AppointmentStatus.Cancelled
+                     && a.Status != AppointmentStatus.Completed)
+            .OrderBy(a => a.StartTime)
+            .ToListAsync(cancellationToken);
+    }
 }

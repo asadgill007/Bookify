@@ -122,6 +122,24 @@ public class AppointmentsController : ApiController
     }
 
     /// <summary>
+    /// Mark a confirmed appointment as in progress (Provider/BusinessOwner/Admin only).
+    /// This is required before an appointment can be completed.
+    /// </summary>
+    [HttpPut("{id}/start")]
+    [Authorize(Roles = "Provider,BusinessOwner,Admin")]
+    public async Task<IActionResult> Start(Guid id, CancellationToken cancellationToken)
+    {
+        var command = new StartAppointmentCommand
+        {
+            AppointmentId = id,
+            UserId = GetUserId()
+        };
+
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
     /// Mark appointment as completed (Provider/BusinessOwner/Admin only).
     /// </summary>
     [HttpPut("{id}/complete")]

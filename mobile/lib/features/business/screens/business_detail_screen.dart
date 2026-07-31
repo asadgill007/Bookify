@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../reviews/screens/reviews_section.dart';
 import '../providers/business_detail_provider.dart';
 
 /// Premium Business Detail screen, wired to the real API by slug.
@@ -526,6 +527,14 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
                   ).animate().fadeIn(duration: 400.ms, delay: 700.ms),
                 ),
               ],
+
+              // Reviews
+              SliverToBoxAdapter(
+                child: ReviewsSection(
+                  businessId: business.id,
+                  businessName: business.name,
+                ),
+              ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
