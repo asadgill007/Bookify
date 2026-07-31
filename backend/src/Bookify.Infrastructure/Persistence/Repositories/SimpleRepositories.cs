@@ -41,6 +41,42 @@ public class ServiceRepository : BaseRepository<Service>, IServiceRepository
     }
 }
 
+public class BusinessHoursRepository : BaseRepository<BusinessHours>, IBusinessHoursRepository
+{
+    public BusinessHoursRepository(AppDbContext context) : base(context) { }
+
+    public async Task<IReadOnlyList<BusinessHours>> GetByBusinessIdAsync(Guid businessId, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Where(h => h.BusinessId == businessId)
+            .OrderBy(h => h.DayOfWeek)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<BusinessHours>> GetByBusinessIdsAsync(IReadOnlyList<Guid> businessIds, CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Where(h => businessIds.Contains(h.BusinessId))
+            .OrderBy(h => h.BusinessId)
+            .ThenBy(h => h.DayOfWeek)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task ReplaceForBusinessAsync(Guid businessId, IReadOnlyList<BusinessHours> hours, CancellationToken cancellationToken = default)
+    {
+        var existing = await DbSet
+            .Where(h => h.BusinessId == businessId)
+            .ToListAsync(cancellationToken);
+
+        foreach (var old in existing)
+        {
+            old.SoftDelete();
+        }
+
+        await DbSet.AddRangeAsync(hours, cancellationToken);
+    }
+}
+
 public class PaymentRepository : BaseRepository<Payment>, IPaymentRepository
 {
     public PaymentRepository(AppDbContext context) : base(context) { }

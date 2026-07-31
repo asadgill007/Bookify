@@ -113,6 +113,7 @@ public class AdminController : ApiController
     public async Task<IActionResult> GetBusinesses(
         [FromQuery] bool? verified,
         [FromQuery] bool? active,
+        [FromQuery] Domain.Enums.VerificationStatus? status,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
@@ -121,6 +122,7 @@ public class AdminController : ApiController
         {
             Verified = verified,
             Active = active,
+            VerificationStatus = status,
             Page = page,
             PageSize = pageSize
         };
@@ -135,6 +137,20 @@ public class AdminController : ApiController
         {
             AdminUserId = GetUserId(),
             BusinessId = businessId
+        };
+
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    [HttpPost("businesses/{businessId}/reject")]
+    public async Task<IActionResult> RejectBusiness(Guid businessId, [FromBody] RejectRequest request, CancellationToken cancellationToken)
+    {
+        var command = new RejectBusinessCommand
+        {
+            AdminUserId = GetUserId(),
+            BusinessId = businessId,
+            Reason = request.Reason
         };
 
         var result = await _mediator.Send(command, cancellationToken);
@@ -206,6 +222,11 @@ public class SuspendRequest
 public class ToggleStatusRequest
 {
     public bool IsActive { get; set; }
+}
+
+public class RejectRequest
+{
+    public string? Reason { get; set; }
 }
 
 public class ModerateRequest

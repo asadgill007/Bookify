@@ -5,16 +5,25 @@ import '../../../core/constants/api_constants.dart';
 /// Auth state.
 enum AuthStatus { unknown, authenticating, authenticated, unauthenticated }
 
+/// Account types supported at registration.
+class AccountType {
+  static const String customer = 'customer';
+  static const String provider = 'provider';
+  static const String businessOwner = 'businessOwner';
+}
+
 class AuthState {
   final AuthStatus status;
   final String? userId;
   final String? email;
+  final String? role;
   final String? error;
 
   const AuthState({
     this.status = AuthStatus.unauthenticated,
     this.userId,
     this.email,
+    this.role,
     this.error,
   });
 
@@ -22,12 +31,14 @@ class AuthState {
     AuthStatus? status,
     String? userId,
     String? email,
+    String? role,
     String? error,
   }) {
     return AuthState(
       status: status ?? this.status,
       userId: userId ?? this.userId,
       email: email ?? this.email,
+      role: role ?? this.role,
       error: error,
     );
   }
@@ -82,6 +93,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         status: AuthStatus.authenticated,
         email: email,
         userId: data['userId'] as String?,
+        role: data['role'] as String?,
         error: null,
       );
     } catch (e) {
@@ -92,12 +104,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> register({
+  /// Registers a new account. [accountType] is one of
+  /// [AccountType.customer], [AccountType.provider] or
+  /// [AccountType.businessOwner]. Returns true on success.
+  Future<bool> register({
     required String firstName,
     required String lastName,
     required String email,
     required String password,
     required String confirmPassword,
+    String accountType = AccountType.customer,
   }) async {
     state = state.copyWith(status: AuthStatus.authenticating, error: null);
     try {
@@ -110,6 +126,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           'email': email,
           'password': password,
           'confirmPassword': confirmPassword,
+          'accountType': accountType,
         },
       );
 
@@ -126,20 +143,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
       } else {
         // If no token in register response, fall back to auto-login
         await login(email, password);
-        return;
+        return state.status == AuthStatus.authenticated;
       }
 
       state = state.copyWith(
         status: AuthStatus.authenticated,
         email: email,
         userId: data['userId'] as String?,
+        role: data['role'] as String?,
         error: null,
       );
+      return true;
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         error: 'Registration failed. Please try again.',
       );
+      return false;
     }
   }
 

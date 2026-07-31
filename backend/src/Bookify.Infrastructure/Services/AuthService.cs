@@ -33,12 +33,13 @@ public class AuthService : IAuthService
             return Result<AuthResponse>.Failure("Email is already registered.", "EMAIL_EXISTS");
 
         var passwordHash = _passwordHasher.Hash(request.Password);
+        var role = MapAccountTypeToRole(request.AccountType);
         var user = new User(
             request.FirstName,
             request.LastName,
             request.Email,
             passwordHash,
-            UserRole.Customer,
+            role,
             request.PhoneNumber);
 
         await _unitOfWork.Users.AddAsync(user, cancellationToken);
@@ -63,7 +64,7 @@ public class AuthService : IAuthService
         await _unitOfWork.RefreshTokens.AddAsync(refreshToken, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("User registered: {Email} with ID {UserId}", user.Email, user.Id);
+        _logger.LogInformation("User registered: {Email} with ID {UserId} as {Role}", user.Email, user.Id, user.Role);
 
         return Result<AuthResponse>.Success(new AuthResponse
         {
@@ -76,6 +77,50 @@ public class AuthService : IAuthService
             RefreshToken = tokens.RefreshToken,
             ExpiresIn = tokens.ExpiresInSeconds
         });
+    }
+
+    public async Task<Result<Domain.Entities.User>> RegisterStaffAsync(
+        string firstName,
+        string lastName,
+        string email,
+        string? avatarUrl,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var existing = await _unitOfWork.Users.GetByEmailAsync(normalizedEmail, cancellationToken);
+        if (existing != null)
+        {
+            if (existing.Role == UserRole.Customer)
+                existing.SetRole(UserRole.Provider);
+            return Result<Domain.Entities.User>.Success(existing);
+        }
+
+        // Generate a temporary password; the staff member can reset it via forgot-password.
+        var tempPassword = $"Temp!{Guid.NewGuid():N}"[..20];
+        var user = new User(
+            firstName,
+            lastName,
+            normalizedEmail,
+            _passwordHasher.Hash(tempPassword),
+            UserRole.Provider);
+        user.SetAvatar(avatarUrl);
+
+        await _unitOfWork.Users.AddAsync(user, cancellationToken);
+        // Note: no SaveChanges here — the caller (AddBusinessProviderCommandHandler)
+        // persists the user together with the Provider row in a single transaction.
+
+        _logger.LogInformation("Staff account created: {Email} with ID {UserId}", user.Email, user.Id);
+        return Result<Domain.Entities.User>.Success(user);
+    }
+
+    private static UserRole MapAccountTypeToRole(string? accountType)
+    {
+        return accountType?.Trim().ToLowerInvariant() switch
+        {
+            "provider" => UserRole.Provider,
+            "businessowner" => UserRole.BusinessOwner,
+            _ => UserRole.Customer
+        };
     }
 
     public async Task<Result<AuthResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)

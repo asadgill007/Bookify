@@ -65,6 +65,18 @@ class ProfileScreen extends ConsumerWidget {
                           const Divider(height: 1),
                           _buildMenuItem(Icons.calendar_month_outlined, 'My Appointments', () => context.push('/appointments')),
                           const Divider(height: 1),
+                          if (authState.role == 'BusinessOwner' ||
+                              authState.role == 'Provider')
+                            _buildMenuItem(Icons.storefront_outlined, 'My Business',
+                                () => context.push('/my-business')),
+                          if (authState.role == 'BusinessOwner' ||
+                              authState.role == 'Provider')
+                            const Divider(height: 1),
+                          if (authState.role == 'Admin')
+                            _buildMenuItem(Icons.admin_panel_settings_outlined, 'Review Businesses',
+                                () => context.push('/admin/review')),
+                          if (authState.role == 'Admin')
+                            const Divider(height: 1),
                           _buildMenuItem(Icons.favorite_outline, 'Favorites', () => {}),
                           const Divider(height: 1),
                           _buildMenuItem(Icons.notifications_outlined, 'Notifications', () => context.push('/notifications')),

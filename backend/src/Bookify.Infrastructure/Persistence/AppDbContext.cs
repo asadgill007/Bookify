@@ -27,6 +27,7 @@ public class AppDbContext : DbContext
     public DbSet<SubCategory> SubCategories => Set<SubCategory>();
     public DbSet<BusinessCategory> BusinessCategories => Set<BusinessCategory>();
     public DbSet<BusinessImage> BusinessImages => Set<BusinessImage>();
+    public DbSet<BusinessHours> BusinessHours => Set<BusinessHours>();
     public DbSet<Provider> Providers => Set<Provider>();
     public DbSet<ProviderService> ProviderServices => Set<ProviderService>();
     public DbSet<ProviderAvailability> ProviderAvailabilities => Set<ProviderAvailability>();

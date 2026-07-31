@@ -14,11 +14,15 @@ import '../../features/search/screens/search_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 import '../../features/business/screens/business_detail_screen.dart';
+import '../../features/business/providers/businesses_provider.dart';
 import '../../features/appointments/screens/appointments_screen.dart';
 import '../../features/appointments/screens/booking_screen.dart';
 import '../../features/appointments/screens/checkout_screen.dart';
 import '../../features/appointments/screens/confirmation_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
+import '../../features/provider/screens/provider_onboarding_screen.dart';
+import '../../features/provider/screens/my_businesses_screen.dart';
+import '../../features/admin/screens/admin_review_screen.dart';
 import '../../features/help/screens/help_center_screen.dart';
 import '../../features/about/screens/about_screen.dart';
 import '../../features/privacy/screens/privacy_screen.dart';
@@ -57,6 +61,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         '/booking',
         '/checkout',
         '/confirmation',
+        '/my-business',
+        '/onboarding',
+        '/admin/review',
       ];
 
       final isProtectedRoute = protectedRoutes.any(
@@ -119,7 +126,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/search',
         name: 'search',
-        builder: (context, state) => const SearchScreen(),
+        builder: (context, state) => SearchScreen(
+          intent: state.extra is SearchIntent ? state.extra as SearchIntent : null,
+        ),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        name: 'provider-onboarding',
+        builder: (context, state) => const ProviderOnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/my-business',
+        name: 'my-business',
+        builder: (context, state) => const MyBusinessesScreen(),
+      ),
+      GoRoute(
+        path: '/admin/review',
+        name: 'admin-review',
+        builder: (context, state) => const AdminReviewScreen(),
       ),
       GoRoute(
         path: '/business/:slug',
@@ -134,10 +158,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AppointmentsScreen(),
       ),
       GoRoute(
-        path: '/booking/:businessId/:serviceId',
+        path: '/booking/:businessSlug/:serviceId',
         name: 'booking',
         builder: (context, state) => BookingScreen(
-          businessId: state.pathParameters['businessId'] ?? '',
+          businessSlug: state.pathParameters['businessSlug'] ?? '',
           serviceId: state.pathParameters['serviceId'] ?? '',
         ),
       ),

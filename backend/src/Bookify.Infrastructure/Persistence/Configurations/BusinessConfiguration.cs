@@ -63,6 +63,18 @@ public class BusinessConfiguration : IEntityTypeConfiguration<Business>
             .IsRequired()
             .HasDefaultValue(false);
 
+        builder.Property(b => b.VerificationStatus)
+            .IsRequired()
+            .HasConversion<int>()
+            .HasDefaultValue(Domain.Enums.VerificationStatus.Pending);
+
+        builder.Property(b => b.RejectionReason)
+            .HasMaxLength(1000);
+
+        builder.Property(b => b.ReviewedAt);
+
+        builder.Property(b => b.ReviewedBy);
+
         builder.Property(b => b.IsActive)
             .IsRequired()
             .HasDefaultValue(true);
@@ -142,6 +154,11 @@ public class BusinessConfiguration : IEntityTypeConfiguration<Business>
             .WithOne(r => r.Business)
             .HasForeignKey(r => r.BusinessId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(b => b.BusinessHours)
+            .WithOne(h => h.Business)
+            .HasForeignKey(h => h.BusinessId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // Indexes
         builder.HasIndex(b => b.OwnerId)

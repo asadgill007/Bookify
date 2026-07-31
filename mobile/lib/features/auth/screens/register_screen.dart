@@ -19,6 +19,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  String _accountType = AccountType.customer;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
 
@@ -35,19 +36,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
 
-    await ref.read(authProvider.notifier).register(
+    final ok = await ref.read(authProvider.notifier).register(
           firstName: _firstNameController.text.trim(),
           lastName: _lastNameController.text.trim(),
           email: _emailController.text.trim(),
           password: _passwordController.text,
           confirmPassword: _confirmPasswordController.text,
+          accountType: _accountType,
         );
 
-    if (!mounted) return;
-    final authState = ref.read(authProvider);
-    if (authState.status == AuthStatus.authenticated) {
-      context.go('/');
-    }
+    if (!mounted || !ok) return;
+    final isBusiness = _accountType == AccountType.businessOwner ||
+        _accountType == AccountType.provider;
+    // Business owners / providers go straight into onboarding.
+    context.go(isBusiness ? '/onboarding' : '/');
   }
 
   @override
@@ -100,11 +102,47 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 GlassContainer(
                   borderRadius: 24,
                   blurSigma: 16,
-                  padding: const EdgeInsets.all(24),
-                  child: Form(
+                  padding: const EdgeInsets.all(24),                    child: Form(
                     key: _formKey,
                     child: Column(
                       children: [
+                        // Account type selection
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 20),
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.06)
+                                : Colors.white.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark
+                                  ? AppTheme.glassStrokeDark
+                                  : AppTheme.glassStrokeLight,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              _buildAccountTypeCard(
+                                context,
+                                icon: Icons.person_outline,
+                                title: 'Customer',
+                                subtitle: 'Book services near you',
+                                type: AccountType.customer,
+                                isDark: isDark,
+                              ),
+                              const SizedBox(height: 8),
+                              _buildAccountTypeCard(
+                                context,
+                                icon: Icons.storefront_outlined,
+                                title: 'List your business',
+                                subtitle: 'Owners & staff join to manage bookings',
+                                type: AccountType.businessOwner,
+                                isDark: isDark,
+                              ),
+                            ],
+                          ),
+                        ),
                         if (authState.error != null)
                           Container(
                             padding: const EdgeInsets.all(12),
@@ -318,6 +356,109 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ).animate().fadeIn(duration: 600.ms, delay: 300.ms),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Account type selection card (Customer vs Business Owner).
+  Widget _buildAccountTypeCard(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String type,
+    required bool isDark,
+  }) {
+    final theme = Theme.of(context);
+    final isSelected = _accountType == type;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => setState(() => _accountType = type),
+        child: AnimatedContainer(
+          duration: 200.ms,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppTheme.indigoLuxury.withValues(alpha: isDark ? 0.35 : 0.12)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected
+                  ? AppTheme.indigoLuxury
+                  : (isDark
+                      ? AppTheme.glassStrokeDark
+                      : AppTheme.glassStrokeLight),
+              width: isSelected ? 1.6 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppTheme.indigoLuxury.withValues(alpha: 0.2)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  color: isSelected
+                      ? AppTheme.indigoLuxury
+                      : (isDark
+                          ? Colors.white54
+                          : AppTheme.indigoLuxury.withValues(alpha: 0.6)),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? AppTheme.indigoLuxury
+                            : (isDark ? Colors.white : AppTheme.indigoLuxury),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: isDark ? Colors.white54 : Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              AnimatedContainer(
+                duration: 200.ms,
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected ? AppTheme.indigoLuxury : Colors.grey,
+                    width: 2,
+                  ),
+                  color: isSelected
+                      ? AppTheme.indigoLuxury
+                      : Colors.transparent,
+                ),
+                child: isSelected
+                    ? const Icon(Icons.check, color: Colors.white, size: 14)
+                    : null,
+              ),
+            ],
           ),
         ),
       ),

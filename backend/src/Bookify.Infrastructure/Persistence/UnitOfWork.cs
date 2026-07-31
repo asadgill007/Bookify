@@ -18,6 +18,7 @@ public class UnitOfWork : IUnitOfWork
     public IBusinessRepository Businesses { get; }
     public IProviderRepository Providers { get; }
     public IServiceRepository Services { get; }
+    public IBusinessHoursRepository BusinessHours { get; }
     public IAppointmentRepository Appointments { get; }
     public IReviewRepository Reviews { get; }
     public IPaymentRepository Payments { get; }
@@ -36,6 +37,7 @@ public class UnitOfWork : IUnitOfWork
         IBusinessRepository businesses,
         IProviderRepository providers,
         IServiceRepository services,
+        IBusinessHoursRepository businessHours,
         IAppointmentRepository appointments,
         IReviewRepository reviews,
         IPaymentRepository payments,
@@ -53,6 +55,7 @@ public class UnitOfWork : IUnitOfWork
         Businesses = businesses;
         Providers = providers;
         Services = services;
+        BusinessHours = businessHours;
         Appointments = appointments;
         Reviews = reviews;
         Payments = payments;

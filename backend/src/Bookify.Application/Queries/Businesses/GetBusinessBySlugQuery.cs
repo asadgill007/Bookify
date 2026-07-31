@@ -8,6 +8,10 @@ namespace Bookify.Application.Queries.Businesses;
 public sealed record GetBusinessBySlugQuery : IRequest<Result<BusinessDetailDto>>
 {
     public string Slug { get; init; } = string.Empty;
+    /// <summary>Optional requesting user (null = anonymous customer).</summary>
+    public Guid? UserId { get; init; }
+    /// <summary>True when the requesting user has the Admin role.</summary>
+    public bool IsAdmin { get; init; }
 }
 
 public sealed class GetBusinessBySlugQueryHandler : IRequestHandler<GetBusinessBySlugQuery, Result<BusinessDetailDto>>
@@ -24,6 +28,16 @@ public sealed class GetBusinessBySlugQueryHandler : IRequestHandler<GetBusinessB
         var business = await _unitOfWork.Businesses.GetBySlugAsync(request.Slug, cancellationToken);
         if (business == null)
             return Result<BusinessDetailDto>.Failure("Business not found.", "NOT_FOUND");
+
+        // Pending/rejected businesses are only visible to the owner and admins.
+        if (!business.IsVerified)
+        {
+            var isOwner = request.UserId.HasValue && business.OwnerId == request.UserId.Value;
+            if (!isOwner && !request.IsAdmin)
+                return Result<BusinessDetailDto>.Failure("Business not found.", "NOT_FOUND");
+        }
+
+        var hours = await _unitOfWork.BusinessHours.GetByBusinessIdAsync(business.Id, cancellationToken);
 
         var dto = new BusinessDetailDto
         {
@@ -47,6 +61,8 @@ public sealed class GetBusinessBySlugQueryHandler : IRequestHandler<GetBusinessB
                 : null,
             Website = business.Website,
             IsVerified = business.IsVerified,
+            VerificationStatus = business.VerificationStatus.ToString(),
+            RejectionReason = business.RejectionReason,
             BookingType = business.BookingType.ToString(),
             CancellationPolicy = business.CancellationPolicy,
             TimeZone = business.TimeZone,
@@ -79,6 +95,13 @@ public sealed class GetBusinessBySlugQueryHandler : IRequestHandler<GetBusinessB
                 Price = s.PriceAmount,
                 Currency = s.PriceCurrency,
                 Category = s.Category
+            }).ToList(),
+            OpeningHours = hours.Select(h => new BusinessHoursDto
+            {
+                DayOfWeek = h.DayOfWeek.ToString(),
+                OpenTime = h.OpenTime.ToString("HH:mm"),
+                CloseTime = h.CloseTime.ToString("HH:mm"),
+                IsClosed = h.IsClosed
             }).ToList()
         };
 

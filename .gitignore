@@ -102,9 +102,10 @@ node_modules/
 .env.production
 
 # Runtime output logs
-api_error*.txt
-api_output*.txt
+api_*.txt
 *_output.txt
+*_stderr.txt
+*_stdout.txt
 build_output.txt
 test_output.txt
 flutter_analyze.txt

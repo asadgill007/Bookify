@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/app_theme.dart';
+import 'checkout_screen.dart';
 
 /// Premium Booking Confirmation screen with digital ticket / QR code style.
 class ConfirmationScreen extends ConsumerWidget {
@@ -12,6 +13,27 @@ class ConfirmationScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    // Booking result is passed via the router as extra.
+    final result = GoRouterState.of(context).extra as AppointmentResult?;
+    final bookingRef = result?.bookingReference ?? 'BK-PENDING';
+    final serviceName = result?.serviceName ?? 'Appointment';
+    final amount = result?.totalAmount ?? 0;
+    final currency = result?.currency ?? 'USD';
+    final startTime = result?.startTime;
+
+    final weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    final dateLabel = startTime != null
+        ? '${weekdays[startTime.weekday - 1]}, '
+            '${months[startTime.month - 1]} ${startTime.day}, ${startTime.year}'
+        : '';
+    final timeLabel = startTime != null
+        ? '${startTime.hour.toString().padLeft(2, '0')}:'
+            '${startTime.minute.toString().padLeft(2, '0')}'
+        : '';
 
     return GradientBackground(
       child: Scaffold(
@@ -121,7 +143,7 @@ class ConfirmationScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                'BK2508071030',
+                                bookingRef,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 18,
@@ -146,17 +168,15 @@ class ConfirmationScreen extends ConsumerWidget {
                           padding: const EdgeInsets.all(20),
                           child: Column(
                             children: [
-                              _buildTicketRow(Icons.content_cut, 'Service', "Women's Haircut & Style", theme, colorScheme),
+                              _buildTicketRow(Icons.content_cut, 'Service', serviceName, theme, colorScheme),
                               const SizedBox(height: 16),
-                              _buildTicketRow(Icons.person, 'Provider', 'Sophia Chen', theme, colorScheme),
+                              _buildTicketRow(Icons.person, 'Provider', 'Your provider', theme, colorScheme),
                               const SizedBox(height: 16),
-                              _buildTicketRow(Icons.calendar_today, 'Date', 'Friday, August 7, 2026', theme, colorScheme),
+                              _buildTicketRow(Icons.calendar_today, 'Date', dateLabel, theme, colorScheme),
                               const SizedBox(height: 16),
-                              _buildTicketRow(Icons.access_time, 'Time', '10:30 AM', theme, colorScheme),
+                              _buildTicketRow(Icons.access_time, 'Time', timeLabel, theme, colorScheme),
                               const SizedBox(height: 16),
-                              _buildTicketRow(Icons.location_on, 'Location', 'Luxe Hair Studio, 123 Main Street, New York', theme, colorScheme),
-                              const SizedBox(height: 16),
-                              _buildTicketRow(Icons.attach_money, 'Amount Paid', '\$78.45', theme, colorScheme, isPrice: true),
+                              _buildTicketRow(Icons.attach_money, 'Amount Paid', '${currency == 'USD' ? '\$' : ''}${amount.toStringAsFixed(2)}', theme, colorScheme, isPrice: true),
                             ],
                           ),
                         ),

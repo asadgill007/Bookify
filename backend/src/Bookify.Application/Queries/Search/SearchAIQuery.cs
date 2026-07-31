@@ -41,6 +41,7 @@ public sealed class SearchAIQueryHandler : IRequestHandler<SearchAIQuery, Result
         if (interpretation.IsFailure)
             return Result<SearchAIResult>.Failure(interpretation.Error!, interpretation.ErrorCode);
 
+        // AI search only surfaces approved businesses, same as customer search.
         var businesses = await _unitOfWork.Businesses.SearchAsync(
             request.Query,
             null,
@@ -50,7 +51,7 @@ public sealed class SearchAIQueryHandler : IRequestHandler<SearchAIQuery, Result
             null,
             null,
             null,
-            null,
+            true,
             "rating",
             "desc",
             1,

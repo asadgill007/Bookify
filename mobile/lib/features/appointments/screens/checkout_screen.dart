@@ -2,9 +2,48 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../core/theme/app_theme.dart';
+import 'booking_screen.dart';
 
-/// Premium Checkout screen with glassmorphism payment selection.
+/// Appointment result returned by the backend.
+class AppointmentResult {
+  final String id;
+  final String bookingReference;
+  final String status;
+  final DateTime startTime;
+  final DateTime endTime;
+  final double totalAmount;
+  final String currency;
+  final String serviceName;
+
+  const AppointmentResult({
+    required this.id,
+    required this.bookingReference,
+    required this.status,
+    required this.startTime,
+    required this.endTime,
+    required this.totalAmount,
+    required this.currency,
+    required this.serviceName,
+  });
+
+  factory AppointmentResult.fromJson(Map<String, dynamic> json) =>
+      AppointmentResult(
+        id: json['id'] as String? ?? '',
+        bookingReference: json['bookingReference'] as String? ?? '',
+        status: json['status'] as String? ?? 'Pending',
+        startTime:
+            DateTime.tryParse(json['startTime'] as String? ?? '') ?? DateTime.now(),
+        endTime: DateTime.tryParse(json['endTime'] as String? ?? '') ?? DateTime.now(),
+        totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
+        currency: json['currency'] as String? ?? 'USD',
+        serviceName: json['serviceName'] as String? ?? '',
+      );
+}
+
+/// Premium Checkout screen that creates a real appointment.
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
 
@@ -13,41 +52,22 @@ class CheckoutScreen extends ConsumerStatefulWidget {
 }
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
-  String _selectedPayment = 'credit_card';
-  final _couponController = TextEditingController();
   bool _isProcessing = false;
-
-  final List<Map<String, dynamic>> _paymentMethods = [
-    {'id': 'credit_card', 'name': 'Credit Card', 'icon': Icons.credit_card, 'color': const Color(0xFF6366F1)},
-    {'id': 'paypal', 'name': 'PayPal', 'icon': Icons.payments, 'color': const Color(0xFF0070BA)},
-    {'id': 'apple_pay', 'name': 'Apple Pay', 'icon': Icons.phone_iphone, 'color': const Color(0xFF000000)},
-    {'id': 'google_pay', 'name': 'Google Pay', 'icon': Icons.account_balance_wallet, 'color': const Color(0xFF4285F4)},
-  ];
-
-  final _orderDetails = {
-    'service': "Women's Haircut & Style",
-    'provider': 'Sophia Chen',
-    'date': 'Friday, Aug 7',
-    'time': '10:30 AM',
-    'location': 'Luxe Hair Studio, New York',
-    'subtotal': 65.00,
-    'serviceFee': 5.00,
-    'tax': 8.45,
-  };
-
-  @override
-  void dispose() {
-    _couponController.dispose();
-    super.dispose();
-  }
-
-  double get _totalPrice => (_orderDetails['subtotal'] as double) + (_orderDetails['serviceFee'] as double) + (_orderDetails['tax'] as double);
+  String? _error;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
+    final draft = GoRouterState.of(context).extra as BookingDraft?;
+
+    if (draft == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Checkout')),
+        body: const Center(child: Text('No booking details found.')),
+      );
+    }
 
     return GradientBackground(
       child: Scaffold(
@@ -62,11 +82,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               child: CustomScrollView(
                 physics: const BouncingScrollPhysics(),
                 slivers: [
-                  // ── Order Summary ──
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                      child: Text('Order Summary', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      child: Text('Order Summary',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700)),
                     ).animate().fadeIn(duration: 400.ms),
                   ),
                   SliverToBoxAdapter(
@@ -77,135 +98,74 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           children: [
-                            _buildOrderRow('Service', _orderDetails['service'] as String, theme, colorScheme),
+                            _buildOrderRow(
+                                'Service', draft.serviceName, theme, colorScheme),
                             const SizedBox(height: 10),
-                            _buildOrderRow('Provider', _orderDetails['provider'] as String, theme, colorScheme),
+                            _buildOrderRow(
+                                'Provider', draft.providerName, theme, colorScheme),
                             const SizedBox(height: 10),
-                            _buildOrderRow('Date', _orderDetails['date'] as String, theme, colorScheme),
+                            _buildOrderRow('Business', draft.businessName,
+                                theme, colorScheme),
                             const SizedBox(height: 10),
-                            _buildOrderRow('Time', _orderDetails['time'] as String, theme, colorScheme),
+                            _buildOrderRow(
+                                'Date',
+                                '${draft.startTime.day}/${draft.startTime.month}/${draft.startTime.year}',
+                                theme,
+                                colorScheme),
                             const SizedBox(height: 10),
-                            _buildOrderRow('Location', _orderDetails['location'] as String, theme, colorScheme),
+                            _buildOrderRow(
+                                'Time',
+                                '${_formatTime(draft.startTime)} – ${_formatTime(draft.endTime)}',
+                                theme,
+                                colorScheme),
                             const Divider(height: 24, color: AppTheme.slate200),
-                            _buildPriceRow('Subtotal', '\$${(_orderDetails['subtotal'] as double).toStringAsFixed(2)}', theme, colorScheme, isBold: false),
-                            const SizedBox(height: 6),
-                            _buildPriceRow('Service Fee', '\$${(_orderDetails['serviceFee'] as double).toStringAsFixed(2)}', theme, colorScheme, isBold: false),
-                            const SizedBox(height: 6),
-                            _buildPriceRow('Tax', '\$${(_orderDetails['tax'] as double).toStringAsFixed(2)}', theme, colorScheme, isBold: false),
-                            const SizedBox(height: 6),
-                            _buildPriceRow('Total', '\$${_totalPrice.toStringAsFixed(2)}', theme, colorScheme, isBold: true),
+                            _buildPriceRow(
+                                'Total',
+                                '${draft.currency == 'USD' ? '\$' : ''}${draft.price.toStringAsFixed(2)}',
+                                theme,
+                                colorScheme,
+                                isBold: true),
                           ],
                         ),
                       ),
-                    ).animate().fadeIn(duration: 400.ms, delay: 100.ms),
-                  ),
-
-                  // ── Coupon Input ──
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                      child: Text('Promo Code', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                    ).animate().fadeIn(duration: 400.ms, delay: 200.ms),
-                  ),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: GlassContainer(
-                        borderRadius: AppTheme.radiusFull,
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _couponController,
-                                decoration: InputDecoration(
-                                  hintText: 'Enter coupon code',
-                                  hintStyle: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14),
-                                  prefixIcon: Icon(Icons.confirmation_number_outlined, color: AppTheme.indigoLuxury, size: 20),
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                                ),
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: [AppTheme.indigoLuxury, const Color(0xFF7C3AED)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                                borderRadius: BorderRadius.circular(AppTheme.radiusFull),
-                              ),
-                              child: const Text('Apply', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ).animate().fadeIn(duration: 400.ms, delay: 250.ms),
-                  ),
-
-                  // ── Payment Method ──
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                      child: Text('Payment Method', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                    ).animate().fadeIn(duration: 400.ms, delay: 300.ms),
-                  ),
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final method = _paymentMethods[index];
-                        final isSelected = _selectedPayment == method['id'];
-                        return Padding(
-                          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 10),
-                          child: GestureDetector(
-                            onTap: () => setState(() => _selectedPayment = method['id'] as String),
-                            child: GlassContainer(
-                              borderRadius: AppTheme.radiusLg,
-                              padding: const EdgeInsets.all(14),
-                              borderSide: isSelected ? BorderSide(color: AppTheme.indigoLuxury, width: 2) : null,
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 48, height: 48,
-                                    decoration: BoxDecoration(
-                                      color: (method['color'] as Color).withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-                                    ),
-                                    child: Icon(method['icon'] as IconData, color: method['color'] as Color, size: 24),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Text(method['name'] as String, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-                                  ),
-                                  Container(
-                                    width: 22, height: 22,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: isSelected ? AppTheme.indigoLuxury : colorScheme.onSurfaceVariant,
-                                        width: 2,
-                                      ),
-                                      color: isSelected ? AppTheme.indigoLuxury : Colors.transparent,
-                                    ),
-                                    child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ).animate().fadeIn(duration: 300.ms, delay: (350 + index * 60).ms);
-                      },
-                      childCount: _paymentMethods.length,
                     ),
-                  ),
+                  ).animate().fadeIn(duration: 400.ms, delay: 100.ms),
 
+                  if (_error != null)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: Colors.red.withValues(alpha: 0.2)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.error_outline,
+                                  color: Colors.red.shade400, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _error!,
+                                  style: theme.textTheme.bodySmall
+                                      ?.copyWith(color: Colors.red.shade400),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   const SliverToBoxAdapter(child: SizedBox(height: 100)),
                 ],
               ),
             ),
 
-            // ── Sticky Confirm Button ──
+            // Sticky Confirm button
             Container(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               decoration: BoxDecoration(
@@ -213,7 +173,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    isDark ? AppTheme.slate900.withValues(alpha: 0) : AppTheme.slate50.withValues(alpha: 0),
+                    isDark
+                        ? AppTheme.slate900.withValues(alpha: 0)
+                        : AppTheme.slate50.withValues(alpha: 0),
                     isDark ? AppTheme.slate900 : AppTheme.slate50,
                   ],
                 ),
@@ -226,25 +188,36 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [AppTheme.indigoLuxury, const Color(0xFF7C3AED)],
-                        begin: Alignment.topLeft, end: Alignment.bottomRight,
+                        colors: [
+                          AppTheme.indigoLuxury,
+                          const Color(0xFF7C3AED),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(AppTheme.radiusFull),
                       boxShadow: AppTheme.indigoGlowShadow,
                     ),
                     child: MaterialButton(
-                      onPressed: _isProcessing ? null : () async {
-                        setState(() => _isProcessing = true);
-                        await Future.delayed(const Duration(seconds: 1));
-                        if (!mounted) return;
-                        context.push('/confirmation');
-                      },
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusFull)),
+                      onPressed: _isProcessing ? null : () => _confirm(draft),
+                      shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusFull)),
                       child: _isProcessing
-                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2),
+                            )
                           : Text(
-                              'Confirm Booking — \$${_totalPrice.toStringAsFixed(2)}',
-                              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                              'Confirm Booking — '
+                              '${draft.currency == 'USD' ? '\$' : ''}'
+                              '${draft.price.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600),
                             ),
                     ),
                   ),
@@ -257,35 +230,85 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Widget _buildOrderRow(String label, String value, ThemeData theme, ColorScheme colorScheme) {
+  Future<void> _confirm(BookingDraft draft) async {
+    setState(() {
+      _isProcessing = true;
+      _error = null;
+    });
+    try {
+      final api = ref.read(apiClientProvider);
+      final response = await api.post(
+        ApiConstants.appointments,
+        data: {
+          'providerId': draft.providerId,
+          'serviceId': draft.serviceId,
+          'businessId': draft.businessId,
+          'startTime': draft.startTime.toIso8601String(),
+          'endTime': draft.endTime.toIso8601String(),
+        },
+      );
+
+      final body = response.data as Map<String, dynamic>;
+      final data = (body['data'] ?? body) as Map<String, dynamic>;
+      final result = AppointmentResult.fromJson(data);
+
+      if (!mounted) return;
+      context.pushReplacement('/confirmation', extra: result);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isProcessing = false;
+        _error = 'Booking failed. Please try another time slot. $e';
+      });
+    }
+  }
+
+  String _formatTime(DateTime dt) {
+    final h = dt.hour.toString().padLeft(2, '0');
+    final m = dt.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
+  Widget _buildOrderRow(
+      String label, String value, ThemeData theme, ColorScheme colorScheme) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
           width: 72,
-          child: Text(label, style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500)),
+          child: Text(label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500)),
         ),
         Expanded(
-          child: Text(value, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+          child: Text(value,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500)),
         ),
       ],
     );
   }
 
-  Widget _buildPriceRow(String label, String value, ThemeData theme, ColorScheme colorScheme, {bool isBold = false}) {
+  Widget _buildPriceRow(String label, String value, ThemeData theme,
+      ColorScheme colorScheme,
+      {bool isBold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(
-          fontSize: isBold ? 16 : 14,
-          fontWeight: isBold ? FontWeight.w700 : FontWeight.w400,
-          color: isBold ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
-        )),
-        Text(value, style: TextStyle(
-          fontSize: isBold ? 18 : 14,
-          fontWeight: isBold ? FontWeight.w700 : FontWeight.w600,
-          color: isBold ? AppTheme.indigoLuxury : colorScheme.onSurface,
-        )),
+        Text(label,
+            style: TextStyle(
+              fontSize: isBold ? 16 : 14,
+              fontWeight: isBold ? FontWeight.w700 : FontWeight.w400,
+              color:
+                  isBold ? colorScheme.onSurface : colorScheme.onSurfaceVariant,
+            )),
+        Text(value,
+            style: TextStyle(
+              fontSize: isBold ? 18 : 14,
+              fontWeight: isBold ? FontWeight.w700 : FontWeight.w600,
+              color: isBold ? AppTheme.indigoLuxury : colorScheme.onSurface,
+            )),
       ],
     );
   }

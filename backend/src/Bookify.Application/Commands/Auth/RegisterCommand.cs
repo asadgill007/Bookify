@@ -15,6 +15,9 @@ public sealed record RegisterCommand : IRequest<Result<AuthResponse>>
     public string PhoneNumber { get; init; } = string.Empty;
     public string Password { get; init; } = string.Empty;
     public string ConfirmPassword { get; init; } = string.Empty;
+
+    /// <summary>Account type: "customer", "provider", or "businessOwner".</summary>
+    public string AccountType { get; init; } = "customer";
 }
 
 public sealed class RegisterCommandValidator : AbstractValidator<RegisterCommand>
@@ -35,6 +38,16 @@ public sealed class RegisterCommandValidator : AbstractValidator<RegisterCommand
 
         RuleFor(x => x.ConfirmPassword)
             .Equal(x => x.Password).WithMessage("Passwords do not match.");
+
+        RuleFor(x => x.AccountType)
+            .Must(BeValidAccountType).WithMessage("Account type must be one of: customer, provider, businessOwner.");
+    }
+
+    private static bool BeValidAccountType(string accountType)
+    {
+        return string.IsNullOrWhiteSpace(accountType) ||
+               new[] { "customer", "provider", "businessowner" }
+                   .Contains(accountType.Trim().ToLowerInvariant());
     }
 }
 
@@ -56,7 +69,8 @@ public sealed class RegisterCommandHandler : IRequestHandler<RegisterCommand, Re
             Email = request.Email,
             PhoneNumber = request.PhoneNumber,
             Password = request.Password,
-            ConfirmPassword = request.ConfirmPassword
+            ConfirmPassword = request.ConfirmPassword,
+            AccountType = request.AccountType
         };
 
         return await _authService.RegisterAsync(registerRequest, cancellationToken);

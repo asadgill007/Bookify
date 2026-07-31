@@ -150,6 +150,19 @@ flutter analyze
 flutter test
 ```
 
+### End-to-End Verification
+
+The full provider journey is covered by an automated script against a running API:
+
+```bash
+# 1. Start the API (Development uses the InMemory DB + auto-seed)
+cd backend/src/Bookify.WebApi && dotnet run
+# 2. In another terminal, run the E2E journey:
+node scripts/e2e_test.js
+```
+
+It verifies: seeded categories/businesses intact → register new business owner → onboard business (category, hours, service, provider) → confirm **Pending** and hidden from customer search → admin approves → confirm now visible in search → customer books an appointment against the new business.
+
 ### Test Results (Phase 1)
 
 | Project | Passed | Failed | Skipped |
@@ -171,9 +184,12 @@ flutter test
 | **Health** | `GET /health` | Public |
 | **Auth** | Register, Login, Refresh, Logout, Forgot/Reset Password | Mixed |
 | **Users** | Profile CRUD, Password Change, Biometric Toggle | JWT |
-| **Businesses** | Search, Detail by Slug, Create | Mixed |
+| **Businesses** | Search (verified-only), Detail by Slug, Create, Update, My Businesses, Set Hours, Resubmit | Mixed |
 | **Categories** | List all categories | Public |
-| **Services** | Provider services CRUD | Mixed |
+| **Services** | Business services CRUD (`/businesses/{id}/services`) | JWT (owner) |
+| **Providers** | Add staff to a business (`/businesses/{id}/providers`), availability, slots | Mixed |
+| **Business Hours** | Weekly opening hours per business (`PUT /businesses/{id}/hours`) | JWT (owner) |
+| **Business Verification** | Pending → Approved / Rejected lifecycle with reason; Admin review queue | Admin |
 | **Appointments** | CRUD, Confirm, Cancel, Complete, Reschedule | JWT |
 | **Providers** | Available Slots, Availability, Overrides | Mixed |
 | **Reviews** | CRUD, Reply, Vote, Report, Statistics | Mixed |
@@ -191,6 +207,9 @@ flutter test
 
 ## 📱 Features
 
+- **Provider Onboarding** — Multi-step wizard: business info, category picker, cover image, business hours, services with pricing, staff profiles
+- **Business Verification Lifecycle** — New businesses start Pending, hidden from customer search until an admin approves (or rejects with reason)
+- **Admin Review Queue** — Approve/reject pending businesses, view submitted verification documents
 - **AI Search** — Natural language query interpretation with intelligent filtering
 - **Biometric Auth** — Fingerprint / Face ID for quick login
 - **Real-time Availability** — Slot generation with buffer management

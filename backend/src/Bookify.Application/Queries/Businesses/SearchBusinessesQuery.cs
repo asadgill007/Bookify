@@ -51,6 +51,10 @@ public sealed class SearchBusinessesQueryHandler : IRequestHandler<SearchBusines
             categoryId = category?.Id;
         }
 
+        // Public customer search shows only verified (approved) businesses by default.
+        // Pending/rejected businesses stay hidden until an admin approves them.
+        var effectiveVerified = request.IsVerified ?? true;
+
         var businesses = await _unitOfWork.Businesses.SearchAsync(
             request.Search,
             categoryId,
@@ -60,7 +64,7 @@ public sealed class SearchBusinessesQueryHandler : IRequestHandler<SearchBusines
             request.RatingMin,
             request.PriceMin,
             request.PriceMax,
-            request.IsVerified,
+            effectiveVerified,
             request.SortBy,
             request.SortDirection,
             request.Page,
@@ -68,7 +72,8 @@ public sealed class SearchBusinessesQueryHandler : IRequestHandler<SearchBusines
             cancellationToken);
 
         var totalCount = await _unitOfWork.Businesses.SearchCountAsync(
-            request.Search, categoryId, request.Latitude, request.Longitude, request.RadiusKm, cancellationToken);
+            request.Search, categoryId, request.Latitude, request.Longitude, request.RadiusKm,
+            effectiveVerified, cancellationToken);
 
         var items = businesses.Select(b => new BusinessSearchResult
         {

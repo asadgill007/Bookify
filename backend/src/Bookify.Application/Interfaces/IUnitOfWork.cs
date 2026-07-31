@@ -6,6 +6,7 @@ public interface IUnitOfWork : IDisposable
     IBusinessRepository Businesses { get; }
     IProviderRepository Providers { get; }
     IServiceRepository Services { get; }
+    IBusinessHoursRepository BusinessHours { get; }
     IAppointmentRepository Appointments { get; }
     IReviewRepository Reviews { get; }
     IPaymentRepository Payments { get; }

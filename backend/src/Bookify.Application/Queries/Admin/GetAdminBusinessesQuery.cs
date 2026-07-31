@@ -1,5 +1,7 @@
 using Bookify.Application.Common;
 using Bookify.Application.Interfaces;
+using Bookify.Domain.Entities;
+using Bookify.Domain.Enums;
 using MediatR;
 
 namespace Bookify.Application.Queries.Admin;
@@ -8,6 +10,7 @@ public sealed record GetAdminBusinessesQuery : IRequest<Result<PaginatedList<Adm
 {
     public bool? Verified { get; init; }
     public bool? Active { get; init; }
+    public VerificationStatus? VerificationStatus { get; init; }
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 20;
 }
@@ -20,10 +23,25 @@ public sealed class GetAdminBusinessesQueryHandler : IRequestHandler<GetAdminBus
 
     public async Task<Result<PaginatedList<AdminBusinessDto>>> Handle(GetAdminBusinessesQuery request, CancellationToken cancellationToken)
     {
-        var items = await _unitOfWork.Businesses.GetFilteredAsync(
-            request.Verified, request.Active, request.Page, request.PageSize, cancellationToken);
-        var total = await _unitOfWork.Businesses.GetFilteredCountAsync(
-            request.Verified, request.Active, cancellationToken);
+        // A specific verification status filters directly on the lifecycle enum,
+        // so Pending and Rejected are distinguishable (not lumped into 'not verified').
+        IReadOnlyList<Business> items;
+        int total;
+
+        if (request.VerificationStatus.HasValue)
+        {
+            items = await _unitOfWork.Businesses.GetByStatusAsync(
+                request.VerificationStatus.Value, request.Page, request.PageSize, cancellationToken);
+            total = await _unitOfWork.Businesses.GetCountByStatusAsync(
+                request.VerificationStatus.Value, cancellationToken);
+        }
+        else
+        {
+            items = await _unitOfWork.Businesses.GetFilteredAsync(
+                request.Verified, request.Active, request.Page, request.PageSize, cancellationToken);
+            total = await _unitOfWork.Businesses.GetFilteredCountAsync(
+                request.Verified, request.Active, cancellationToken);
+        }
 
         var dtos = items.Select(b => new AdminBusinessDto
         {
@@ -35,6 +53,9 @@ public sealed class GetAdminBusinessesQueryHandler : IRequestHandler<GetAdminBus
             City = b.City,
             Country = b.Country,
             IsVerified = b.IsVerified,
+            VerificationStatus = b.VerificationStatus.ToString(),
+            RejectionReason = b.RejectionReason,
+            ReviewedAt = b.ReviewedAt,
             IsActive = b.IsActive,
             AverageRating = b.AverageRating,
             TotalReviews = b.TotalReviews,
@@ -57,6 +78,9 @@ public class AdminBusinessDto
     public string City { get; set; } = string.Empty;
     public string Country { get; set; } = string.Empty;
     public bool IsVerified { get; set; }
+    public string VerificationStatus { get; set; } = "Pending";
+    public string? RejectionReason { get; set; }
+    public DateTime? ReviewedAt { get; set; }
     public bool IsActive { get; set; }
     public double AverageRating { get; set; }
     public int TotalReviews { get; set; }

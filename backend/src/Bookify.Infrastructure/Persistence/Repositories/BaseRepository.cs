@@ -17,8 +17,10 @@ public class BaseRepository<T> : IRepository<T> where T : BaseEntity
 
     public virtual async Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        // NOTE: intentionally TRACKED (no AsNoTracking) so command handlers can
+        // mutate the returned entity and have changes persisted by SaveChangesAsync.
+        // An untracked load here caused silent no-op updates across all write flows.
         return await DbSet
-            .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 

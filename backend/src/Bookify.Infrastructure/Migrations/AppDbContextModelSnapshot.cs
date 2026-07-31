@@ -308,6 +308,16 @@ namespace Bookify.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ReviewedBy")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -339,6 +349,11 @@ namespace Bookify.Infrastructure.Migrations
 
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("VerificationStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.Property<string>("Website")
                         .HasMaxLength(500)
@@ -411,6 +426,60 @@ namespace Bookify.Infrastructure.Migrations
                         .HasDatabaseName("IX_BusinessCategories_BusinessId_CategoryId");
 
                     b.ToTable("BusinessCategories", (string)null);
+                });
+
+            modelBuilder.Entity("Bookify.Domain.Entities.BusinessHours", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<TimeOnly>("CloseTime")
+                        .HasColumnType("time");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsClosed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<TimeOnly>("OpenTime")
+                        .HasColumnType("time");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BusinessId", "DayOfWeek")
+                        .IsUnique()
+                        .HasDatabaseName("IX_BusinessHours_BusinessId_DayOfWeek")
+                        .HasFilter("IsDeleted = 0");
+
+                    b.ToTable("BusinessHours", (string)null);
                 });
 
             modelBuilder.Entity("Bookify.Domain.Entities.BusinessImage", b =>
@@ -1959,6 +2028,17 @@ namespace Bookify.Infrastructure.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("Bookify.Domain.Entities.BusinessHours", b =>
+                {
+                    b.HasOne("Bookify.Domain.Entities.Business", "Business")
+                        .WithMany("BusinessHours")
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Business");
+                });
+
             modelBuilder.Entity("Bookify.Domain.Entities.BusinessImage", b =>
                 {
                     b.HasOne("Bookify.Domain.Entities.Business", "Business")
@@ -2302,6 +2382,8 @@ namespace Bookify.Infrastructure.Migrations
             modelBuilder.Entity("Bookify.Domain.Entities.Business", b =>
                 {
                     b.Navigation("BusinessCategories");
+
+                    b.Navigation("BusinessHours");
 
                     b.Navigation("Images");
 

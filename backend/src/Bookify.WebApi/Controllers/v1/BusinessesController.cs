@@ -1,4 +1,6 @@
+using Bookify.Application.Commands.Admin;
 using Bookify.Application.Commands.Businesses;
+using Bookify.Application.Commands.Providers;
 using Bookify.Application.DTOs.Businesses;
 using Bookify.Application.Queries.Businesses;
 using MediatR;
@@ -58,11 +60,35 @@ public class BusinessesController : ApiController
 
     /// <summary>
     /// Get business details by slug.
+    /// Pending/rejected businesses are only visible to their owner (or admins).
     /// </summary>
     [HttpGet("{slug}")]
     public async Task<IActionResult> GetBySlug(string slug, CancellationToken cancellationToken)
     {
-        var query = new GetBusinessBySlugQuery { Slug = slug };
+        Guid? userId = null;
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            try { userId = GetUserId(); } catch { /* anonymous */ }
+        }
+
+        var query = new GetBusinessBySlugQuery
+        {
+            Slug = slug,
+            UserId = userId,
+            IsAdmin = User.IsInRole("Admin")
+        };
+        var result = await _mediator.Send(query, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Get businesses owned by the current user (provider dashboard).
+    /// </summary>
+    [HttpGet("mine")]
+    [Authorize(Roles = "BusinessOwner,Admin")]
+    public async Task<IActionResult> GetMine(CancellationToken cancellationToken)
+    {
+        var query = new GetMyBusinessesQuery { UserId = GetUserId() };
         var result = await _mediator.Send(query, cancellationToken);
         return HandleResult(result);
     }
@@ -79,7 +105,9 @@ public class BusinessesController : ApiController
             UserId = GetUserId(),
             Name = request.Name,
             AddressLine1 = request.AddressLine1,
+            AddressLine2 = request.AddressLine2,
             City = request.City,
+            State = request.State,
             PostalCode = request.PostalCode,
             Country = request.Country,
             TimeZone = request.TimeZone,
@@ -88,8 +116,11 @@ public class BusinessesController : ApiController
             Email = request.Email,
             PhoneNumber = request.PhoneNumber,
             Website = request.Website,
+            CancellationPolicy = request.CancellationPolicy,
             Latitude = request.Latitude,
-            Longitude = request.Longitude
+            Longitude = request.Longitude,
+            CoverImageUrl = request.CoverImageUrl,
+            CategoryIds = request.CategoryIds ?? new List<Guid>()
         };
 
         var result = await _mediator.Send(command, cancellationToken);
@@ -98,4 +129,135 @@ public class BusinessesController : ApiController
 
         return ApiCreated(new { result.Data!.Id, result.Data.Slug }, "Business created successfully.");
     }
+
+    /// <summary>
+    /// Update business details (name, address, categories, booking type, etc.).
+    /// </summary>
+    [HttpPut("{businessId}")]
+    [Authorize(Roles = "BusinessOwner,Admin")]
+    public async Task<IActionResult> Update(Guid businessId, [FromBody] UpdateBusinessRequest request, CancellationToken cancellationToken)
+    {
+        var command = new UpdateBusinessCommand
+        {
+            UserId = GetUserId(),
+            BusinessId = businessId,
+            Name = request.Name,
+            AddressLine1 = request.AddressLine1,
+            AddressLine2 = request.AddressLine2,
+            City = request.City,
+            State = request.State,
+            PostalCode = request.PostalCode,
+            Country = request.Country,
+            TimeZone = request.TimeZone,
+            Currency = request.Currency,
+            Description = request.Description,
+            Email = request.Email,
+            PhoneNumber = request.PhoneNumber,
+            Website = request.Website,
+            CancellationPolicy = request.CancellationPolicy,
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
+            BookingType = request.BookingType,
+            CategoryIds = request.CategoryIds ?? new List<Guid>()
+        };
+
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Set weekly opening hours for a business.
+    /// </summary>
+    [HttpPut("{businessId}/hours")]
+    [Authorize(Roles = "BusinessOwner,Admin")]
+    public async Task<IActionResult> SetHours(Guid businessId, [FromBody] SetBusinessHoursRequest request, CancellationToken cancellationToken)
+    {
+        var command = new SetBusinessHoursCommand
+        {
+            BusinessId = businessId,
+            UserId = GetUserId(),
+            Hours = (request.Hours ?? new List<BusinessDayHoursRequest>())
+                .Select(h => new BusinessDayHours
+                {
+                    DayOfWeek = h.DayOfWeek,
+                    OpenTime = h.OpenTime,
+                    CloseTime = h.CloseTime,
+                    IsClosed = h.IsClosed
+                })
+                .ToList()
+        };
+
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Resubmit a rejected business for review (business owner only).
+    /// </summary>
+    [HttpPost("{businessId}/resubmit")]
+    [Authorize(Roles = "BusinessOwner,Admin")]
+    public async Task<IActionResult> Resubmit(Guid businessId, CancellationToken cancellationToken)
+    {
+        var command = new ResubmitBusinessCommand
+        {
+            UserId = GetUserId(),
+            BusinessId = businessId
+        };
+
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
+    /// Add a staff/provider profile under a business.
+    /// </summary>
+    [HttpPost("{businessId}/providers")]
+    [Authorize(Roles = "BusinessOwner,Admin")]
+    public async Task<IActionResult> AddProvider(Guid businessId, [FromBody] AddBusinessProviderRequest request, CancellationToken cancellationToken)
+    {
+        var command = new AddBusinessProviderCommand
+        {
+            BusinessId = businessId,
+            OwnerUserId = GetUserId(),
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            Email = request.Email,
+            Title = request.Title,
+            Bio = request.Bio,
+            AvatarUrl = request.AvatarUrl,
+            DisplayOrder = request.DisplayOrder,
+            ServiceIds = request.ServiceIds ?? new List<Guid>()
+        };
+
+        var result = await _mediator.Send(command, cancellationToken);
+        if (result.IsFailure)
+            return HandleResult(result);
+
+        return ApiCreated(new { result.Data!.ProviderId, result.Data.UserId }, "Provider added successfully.");
+    }
+}
+
+public class SetBusinessHoursRequest
+{
+    public List<BusinessDayHoursRequest>? Hours { get; set; }
+}
+
+public class BusinessDayHoursRequest
+{
+    public DayOfWeek DayOfWeek { get; set; }
+    public TimeOnly OpenTime { get; set; }
+    public TimeOnly CloseTime { get; set; }
+    public bool IsClosed { get; set; }
+}
+
+public class AddBusinessProviderRequest
+{
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string? Title { get; set; }
+    public string? Bio { get; set; }
+    public string? AvatarUrl { get; set; }
+    public int DisplayOrder { get; set; }
+    public List<Guid>? ServiceIds { get; set; }
 }

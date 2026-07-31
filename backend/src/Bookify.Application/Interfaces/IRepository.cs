@@ -32,6 +32,7 @@ public interface IUserRepository : IRepository<Domain.Entities.User>
 public interface IBusinessRepository : IRepository<Domain.Entities.Business>
 {
     Task<Domain.Entities.Business?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Domain.Entities.Business>> GetByOwnerIdAsync(Guid ownerId, CancellationToken cancellationToken = default);
     Task<int> GetCountAsync(bool? verifiedFilter = null, bool? activeFilter = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Domain.Entities.Business>> GetFilteredAsync(
         bool? verifiedFilter,
@@ -42,6 +43,14 @@ public interface IBusinessRepository : IRepository<Domain.Entities.Business>
     Task<int> GetFilteredCountAsync(
         bool? verifiedFilter,
         bool? activeFilter,
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Domain.Entities.Business>> GetByStatusAsync(
+        Domain.Enums.VerificationStatus status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+    Task<int> GetCountByStatusAsync(
+        Domain.Enums.VerificationStatus status,
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Domain.Entities.Business>> SearchAsync(
         string? searchTerm,
@@ -64,6 +73,7 @@ public interface IBusinessRepository : IRepository<Domain.Entities.Business>
         double? latitude,
         double? longitude,
         double? radiusKm,
+        bool? isVerified = null,
         CancellationToken cancellationToken = default);
 }
 
@@ -77,6 +87,13 @@ public interface IProviderRepository : IRepository<Domain.Entities.Provider>
 public interface IServiceRepository : IRepository<Domain.Entities.Service>
 {
     Task<IReadOnlyList<Domain.Entities.Service>> GetByBusinessIdAsync(Guid businessId, CancellationToken cancellationToken = default);
+}
+
+public interface IBusinessHoursRepository : IRepository<Domain.Entities.BusinessHours>
+{
+    Task<IReadOnlyList<Domain.Entities.BusinessHours>> GetByBusinessIdAsync(Guid businessId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Domain.Entities.BusinessHours>> GetByBusinessIdsAsync(IReadOnlyList<Guid> businessIds, CancellationToken cancellationToken = default);
+    Task ReplaceForBusinessAsync(Guid businessId, IReadOnlyList<Domain.Entities.BusinessHours> hours, CancellationToken cancellationToken = default);
 }
 
 public interface IAppointmentRepository : IRepository<Domain.Entities.Appointment>

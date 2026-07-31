@@ -5,7 +5,10 @@ import '../../business/providers/businesses_provider.dart';
 
 /// Search screen — wired to real business search API.
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key});
+  /// Optional initial search intent passed via navigation extra.
+  final SearchIntent? intent;
+
+  const SearchScreen({super.key, this.intent});
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -14,6 +17,21 @@ class SearchScreen extends ConsumerStatefulWidget {
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _searchController = TextEditingController();
   String _currentQuery = '';
+  String? _categorySlug;
+  String _categoryQuery = ''; // text tied to the active category filter
+
+  @override
+  void initState() {
+    super.initState();
+    final intent = widget.intent;
+    final query = intent?.query ?? '';
+    _categorySlug = intent?.categorySlug;
+    _categoryQuery = _categorySlug != null ? query : '';
+    if (query.isNotEmpty) {
+      _searchController.text = query;
+      _currentQuery = query;
+    }
+  }
 
   @override
   void dispose() {
@@ -22,14 +40,24 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   void _performSearch(String query) {
-    setState(() => _currentQuery = query.trim());
+    setState(() {
+      _currentQuery = query.trim();
+      // Keep the category filter when re-submitting the exact text that opened it
+      // (e.g. tapping a category chip then pressing Enter); a genuinely new query
+      // drops the filter and does a text search instead.
+      if (_categorySlug != null && _currentQuery != _categoryQuery) {
+        _categorySlug = null;
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final searchAsync = ref.watch(searchResultsProvider(_currentQuery));
+    final searchAsync = ref.watch(searchResultsProvider(
+      SearchIntent(query: _currentQuery, categorySlug: _categorySlug),
+    ));
 
     return Scaffold(
       appBar: AppBar(
@@ -96,7 +124,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           ],
                         ),
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: () => context.push('/business/${biz.id}'),
+                        onTap: () => context.push('/business/${biz.slug}'),
                       ),
                     );
                   },

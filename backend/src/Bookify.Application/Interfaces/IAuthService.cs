@@ -6,6 +6,18 @@ namespace Bookify.Application.Interfaces;
 public interface IAuthService
 {
     Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates a Provider-role user account for staff with a temporary password.
+    /// Used by business owners when adding staff members.
+    /// </summary>
+    Task<Result<Domain.Entities.User>> RegisterStaffAsync(
+        string firstName,
+        string lastName,
+        string email,
+        string? avatarUrl,
+        CancellationToken cancellationToken = default);
+
     Task<Result<AuthResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
     Task<Result<AuthResponse>> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken cancellationToken = default);
     Task<Result> LogoutAsync(Guid userId, string refreshToken, CancellationToken cancellationToken = default);

@@ -32,7 +32,8 @@ public class AuthController : ApiController
             Email = request.Email,
             PhoneNumber = request.PhoneNumber,
             Password = request.Password,
-            ConfirmPassword = request.ConfirmPassword
+            ConfirmPassword = request.ConfirmPassword,
+            AccountType = request.AccountType
         };
 
         var result = await _mediator.Send(command, cancellationToken);

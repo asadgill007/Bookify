@@ -23,6 +23,10 @@ public sealed class Business : BaseEntity
     public double? Longitude { get; private set; }
     public string? Website { get; private set; }
     public bool IsVerified { get; private set; }
+    public VerificationStatus VerificationStatus { get; private set; }
+    public string? RejectionReason { get; private set; }
+    public DateTime? ReviewedAt { get; private set; }
+    public Guid? ReviewedBy { get; private set; }
     public bool IsActive { get; private set; }
     public BookingType BookingType { get; private set; }
     public string? CancellationPolicy { get; private set; }
@@ -39,6 +43,7 @@ public sealed class Business : BaseEntity
     public ICollection<Review> Reviews { get; private set; } = new List<Review>();
     public ICollection<BusinessImage> Images { get; private set; } = new List<BusinessImage>();
     public ICollection<BusinessCategory> BusinessCategories { get; private set; } = new List<BusinessCategory>();
+    public ICollection<BusinessHours> BusinessHours { get; private set; } = new List<BusinessHours>();
 
     private Business() { }
 
@@ -63,6 +68,7 @@ public sealed class Business : BaseEntity
         Currency = currency;
         IsActive = true;
         BookingType = BookingType.Instant;
+        VerificationStatus = VerificationStatus.Pending;
     }
 
     public void SetName(string name, string slug)
@@ -129,10 +135,36 @@ public sealed class Business : BaseEntity
         Touch();
     }
 
-    public void Verify()
+    public void Verify(Guid? adminUserId = null)
     {
         IsVerified = true;
+        VerificationStatus = VerificationStatus.Approved;
+        RejectionReason = null;
+        ReviewedAt = DateTime.UtcNow;
+        ReviewedBy = adminUserId;
         AddDomainEvent(new BusinessVerifiedEvent(Id, OwnerId, DateTime.UtcNow));
+        Touch();
+    }
+
+    public void Reject(string? reason, Guid? adminUserId = null)
+    {
+        IsVerified = false;
+        VerificationStatus = VerificationStatus.Rejected;
+        RejectionReason = reason?.Trim();
+        ReviewedAt = DateTime.UtcNow;
+        ReviewedBy = adminUserId;
+        Touch();
+    }
+
+    public void ResubmitForReview()
+    {
+        if (VerificationStatus != VerificationStatus.Rejected)
+            throw new InvalidOperationException("Only rejected businesses can be resubmitted for review.");
+
+        VerificationStatus = VerificationStatus.Pending;
+        RejectionReason = null;
+        ReviewedAt = null;
+        ReviewedBy = null;
         Touch();
     }
 
