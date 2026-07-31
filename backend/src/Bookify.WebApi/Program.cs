@@ -95,14 +95,14 @@ if (string.IsNullOrEmpty(jwtKeyValue))
             "the JwtKey environment variable, or use 'dotnet user-secrets set JwtKey <value>'.");
 }
 
-// Fail fast in production if the key is still the insecure committed placeholder,
+// Fail fast outside Development if the key is still the insecure committed placeholder,
 // otherwise tokens would be forgeable with a publicly known signing key.
-if (builder.Environment.IsProduction() &&
+if (!builder.Environment.IsDevelopment() &&
     jwtKeyValue.Contains("CHANGE-ME", StringComparison.OrdinalIgnoreCase))
 {
     throw new InvalidOperationException(
         "JWT signing key is still the insecure default placeholder. Set Jwt:Key or JwtKey " +
-        "to a unique secret before running in production.");
+        "to a unique secret before running outside of Development.");
 }
 
 var jwtKey = Encoding.UTF8.GetBytes(jwtKeyValue);

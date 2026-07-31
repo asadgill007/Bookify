@@ -53,7 +53,7 @@ final businessesProvider = FutureProvider<List<Business>>((ref) async {
   final response = await api.get(ApiConstants.businesses, queryParameters: {
     'page': 1,
     'pageSize': 20,
-    'sortBy': 'averageRating',
+    'sortBy': 'rating',
     'sortDirection': 'desc',
   });
 
