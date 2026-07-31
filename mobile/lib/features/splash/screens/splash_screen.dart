@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../onboarding/screens/onboarding_screen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -34,17 +33,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (!mounted) return;
 
     final authState = ref.read(authProvider);
-    final prefs = ref.read(sharedPrefsProvider);
 
     if (authState.status == AuthStatus.authenticated) {
       context.go('/');
     } else {
-      final onboardingSeen = prefs.getBool('onboarding_complete') ?? false;
-      if (onboardingSeen) {
-        context.go('/login');
-      } else {
-        context.go('/onboarding');
-      }
+      context.go('/onboarding');
     }
   }
 

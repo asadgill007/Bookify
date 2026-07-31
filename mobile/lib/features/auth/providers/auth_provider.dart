@@ -65,11 +65,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
         data: {'email': email, 'password': password},
       );
 
-      final data = response.data as Map<String, dynamic>;
-      final accessToken = data['accessToken'] as String;
-      final refreshToken = data['refreshToken'] as String;
+      // API wraps responses in { "data": { ... } } envelope
+      final body = response.data as Map<String, dynamic>;
+      final data = (body['data'] ?? body) as Map<String, dynamic>;
 
-      await api.saveTokens(accessToken, refreshToken);
+      final accessToken = data['accessToken'] as String?;
+      final refreshToken = data['refreshToken'] as String?;
+
+      if (accessToken == null) {
+        throw Exception('No access token in response');
+      }
+
+      await api.saveTokens(accessToken, refreshToken ?? '');
 
       state = state.copyWith(
         status: AuthStatus.authenticated,
@@ -95,7 +102,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(status: AuthStatus.authenticating, error: null);
     try {
       final api = _ref.read(apiClientProvider);
-      await api.post(
+      final response = await api.post(
         ApiConstants.register,
         data: {
           'firstName': firstName,
@@ -106,8 +113,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
         },
       );
 
-      // Auto-login after successful registration
-      await login(email, password);
+      // API wraps responses in { "data": { ... } } envelope
+      final body = response.data as Map<String, dynamic>;
+      final data = (body['data'] ?? body) as Map<String, dynamic>;
+
+      // Registration response includes access token directly
+      final accessToken = data['accessToken'] as String?;
+      final refreshToken = data['refreshToken'] as String?;
+
+      if (accessToken != null) {
+        await api.saveTokens(accessToken, refreshToken ?? '');
+      } else {
+        // If no token in register response, fall back to auto-login
+        await login(email, password);
+        return;
+      }
+
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        email: email,
+        userId: data['userId'] as String?,
+        error: null,
+      );
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
