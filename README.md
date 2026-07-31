@@ -94,6 +94,17 @@ dotnet run
 # Swagger UI at:    http://localhost:5136/swagger
 ```
 
+### Working with EF Core Migrations
+
+Migrations live in the canonical `backend/src/Bookify.Infrastructure/Migrations/` folder. When adding a new migration, pin the output folder explicitly (the design-time factory resolves a different default folder in this setup):
+
+```bash
+cd backend/src/Bookify.Infrastructure
+dotnet ef migrations add <Name> --output-dir Migrations --startup-project ../Bookify.WebApi
+```
+
+This keeps all migrations in one folder with a single `Bookify.Infrastructure.Migrations` namespace.
+
 ### Environment Variables (Production)
 
 Set these instead of modifying `appsettings.json`:
