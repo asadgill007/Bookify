@@ -1,0 +1,16 @@
+<Project>
+  <!--
+    Shared build settings for all Bookify backend projects.
+
+    NuGetAudit: NuGet's package-vulnerability audit fetches audit data from
+    api.nuget.org at restore time. On networks where the NuGet HTTP client
+    cannot reach the service index (while plain HTTPS still works), the failed
+    fetch surfaces as a noisy NU1900 warning on every build. Because the
+    vulnerability audit is a best-effort, network-dependent check that provides
+    no value when it cannot reach the feed, it is disabled here. Packages are
+    still restored and verified normally.
+  -->
+  <PropertyGroup>
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+</Project>

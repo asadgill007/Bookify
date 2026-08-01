@@ -17,17 +17,26 @@ function check(name, cond, detail = '') {
 }
 
 async function api(method, path, { token, body } = {}) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await res.text();
-  let json = null;
-  try { json = JSON.parse(text); } catch { /* not json */ }
-  return { status: res.status, json, text };
+  // Retry on HTTP 429 (API rate limiter) with backoff so the suite stays green
+  // when several scripts run back-to-back. The limiter window is 1 minute.
+  let attempt = 0;
+  while (true) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${BASE}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (res.status !== 429 || attempt >= 15) {
+      const text = await res.text();
+      let json = null;
+      try { json = JSON.parse(text); } catch { /* not json */ }
+      return { status: res.status, json, text };
+    }
+    attempt++;
+    await new Promise((r) => setTimeout(r, 5000));
+  }
 }
 
 const stamp = Date.now();

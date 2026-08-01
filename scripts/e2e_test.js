@@ -11,16 +11,25 @@
 const BASE = 'http://localhost:5136/api/v1';
 
 async function call(path, { method = 'GET', token, body } = {}) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = 'Bearer ' + token;
-  const res = await fetch(BASE + path, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  let json = null;
-  try { json = await res.json(); } catch (_) {}
-  return { status: res.status, json };
+  // Retry on HTTP 429 (API rate limiter) with backoff so the suite stays green
+  // when several scripts run back-to-back. The limiter window is 1 minute.
+  let attempt = 0;
+  while (true) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    const res = await fetch(BASE + path, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (res.status !== 429 || attempt >= 15) {
+      let json = null;
+      try { json = await res.json(); } catch (_) {}
+      return { status: res.status, json };
+    }
+    attempt++;
+    await new Promise((r) => setTimeout(r, 5000));
+  }
 }
 
 const step = (n, title) => console.log(`\n════ STEP ${n} — ${title} ════`);
@@ -83,7 +92,11 @@ function unwrapList(json) {
       postalCode: '12345', country: 'US', timeZone: 'UTC', currency: 'USD',
       cancellationPolicy: 'Free cancellation 24h prior.',
       categoryIds: [spaCat.id, dentalCat.id],
-      coverImageUrl: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db834?w=800',
+      // NOTE: deliberately NO cover image so the business stays Pending.
+      // With auto-verification, a complete checklist (incl. an image) would
+      // approve it immediately; this script exercises the admin-approve
+      // fallback path instead. See e2e_new_features_test.mjs for the
+      // auto-verification journey.
     },
   });
   const bizData = createBiz.json?.data ?? createBiz.json ?? {};
