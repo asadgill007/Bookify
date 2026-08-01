@@ -138,6 +138,31 @@ class ApiConstants {
   static String documentDownload(String documentId) =>
       '/documents/$documentId/download';
 
+  // ── Favorites endpoints ──
+  static const String favorites = '/favorites';
+
+  /// POST add favorite / DELETE remove: /favorites/{businessId}
+  static String favoriteByBusiness(String businessId) => '/favorites/$businessId';
+
+  /// GET ids of favorited businesses: /favorites/ids
+  static const String favoriteIds = '/favorites/ids';
+
+  // ── AI Chat endpoints ──
+  static const String chatMessages = '/chat/messages';
+  static const String chatHistory = '/chat/history';
+
+  // ── Support endpoints ──
+  static const String supportTickets = '/support/tickets';
+
+  // ── Currency endpoints ──
+  static const String currencies = '/currencies';
+
+  // ── Google Sign-In ──
+  static const String googleLogin = '/auth/google';
+
+  /// POST add gallery images: /businesses/{businessId}/images
+  static String businessImages(String businessId) => '/businesses/$businessId/images';
+
   // ── Health ──
   static const String health = '/health';
 }

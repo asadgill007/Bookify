@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/google_sign_in_button.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -339,6 +340,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ).animate().fadeIn(duration: 600.ms, delay: 200.ms),
 
                 const SizedBox(height: 16),
+
+                // Google Sign-In (defaults to Customer for new accounts)
+                GoogleSignInButton(accountType: _accountType),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text('OR',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant)),
+                    ),
+                    const Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

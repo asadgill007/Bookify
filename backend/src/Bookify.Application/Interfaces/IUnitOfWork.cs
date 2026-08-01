@@ -17,6 +17,9 @@ public interface IUnitOfWork : IDisposable
     IRecurringBookingRepository RecurringBookings { get; }
     IWaitlistRepository Waitlist { get; }
     IDocumentRepository Documents { get; }
+    IFavoriteRepository Favorites { get; }
+    IChatMessageRepository ChatMessages { get; }
+    ISupportTicketRepository SupportTickets { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     Task BeginTransactionAsync(CancellationToken cancellationToken = default);

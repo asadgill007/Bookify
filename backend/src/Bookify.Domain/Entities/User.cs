@@ -21,6 +21,9 @@ public sealed class User : BaseEntity
     public DateTime? SuspendedAt { get; private set; }
     public Guid? SuspendedBy { get; private set; }
     public string? SuspensionReason { get; private set; }
+    public string? GoogleSubject { get; private set; }
+    public string? GoogleName { get; private set; }
+    public string? GooglePictureUrl { get; private set; }
 
     public UserPreference? Preference { get; private set; }
     public ICollection<RefreshToken> RefreshTokens { get; private set; } = new List<RefreshToken>();
@@ -128,6 +131,19 @@ public sealed class User : BaseEntity
     public void SetSuspendedBy(Guid suspendedBy)
     {
         SuspendedBy = suspendedBy;
+    }
+
+    public void LinkGoogleAccount(string googleSubject, string? googleName, string? googlePictureUrl)
+    {
+        if (string.IsNullOrWhiteSpace(googleSubject))
+            throw new ArgumentException("Google subject cannot be empty.", nameof(googleSubject));
+
+        GoogleSubject = googleSubject;
+        GoogleName = googleName?.Trim();
+        GooglePictureUrl = googlePictureUrl?.Trim();
+        if (string.IsNullOrWhiteSpace(AvatarUrl) && !string.IsNullOrWhiteSpace(googlePictureUrl))
+            AvatarUrl = googlePictureUrl.Trim();
+        Touch();
     }
 
     public string FullName => $"{FirstName} {LastName}";

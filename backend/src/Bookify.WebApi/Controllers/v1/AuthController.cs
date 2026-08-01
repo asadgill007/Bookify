@@ -59,6 +59,24 @@ public class AuthController : ApiController
     }
 
     /// <summary>
+    /// Authenticate with a verified Google ID token. Creates a Customer
+    /// account on first sign-in (or the account type passed for new users);
+    /// signs in an existing linked user otherwise.
+    /// </summary>
+    [HttpPost("google")]
+    public async Task<IActionResult> Google([FromBody] GoogleLoginRequest request, CancellationToken cancellationToken)
+    {
+        var command = new GoogleLoginCommand
+        {
+            IdToken = request.IdToken,
+            AccountType = request.AccountType
+        };
+
+        var result = await _mediator.Send(command, cancellationToken);
+        return HandleResult(result);
+    }
+
+    /// <summary>
     /// Refresh an expired access token using a valid refresh token.
     /// </summary>
     [HttpPost("refresh")]
@@ -136,4 +154,12 @@ public class ResetPasswordRequest
     public string Token { get; set; } = string.Empty;
     public string NewPassword { get; set; } = string.Empty;
     public string ConfirmNewPassword { get; set; } = string.Empty;
+}
+
+public class GoogleLoginRequest
+{
+    public string IdToken { get; set; } = string.Empty;
+
+    /// <summary>Account type for brand-new accounts only: customer (default), provider, businessOwner.</summary>
+    public string? AccountType { get; set; }
 }

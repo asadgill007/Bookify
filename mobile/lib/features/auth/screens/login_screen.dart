@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/google_sign_in_button.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -252,6 +253,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ).animate().fadeIn(duration: 600.ms, delay: 400.ms),
 
                   const SizedBox(height: 24),
+
+                  // Google Sign-In
+                  GoogleSignInButton(accountType: AccountType.customer),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('OR',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant)),
+                      ),
+                      const Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
                   // Register link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,

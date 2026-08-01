@@ -605,6 +605,54 @@ namespace Bookify.Infrastructure.Migrations
                     b.ToTable("Categories", (string)null);
                 });
 
+            modelBuilder.Entity("Bookify.Domain.Entities.ChatMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_ChatMessages_UserId");
+
+                    b.ToTable("ChatMessages", (string)null);
+                });
+
             modelBuilder.Entity("Bookify.Domain.Entities.Document", b =>
                 {
                     b.Property<Guid>("Id")
@@ -708,6 +756,50 @@ namespace Bookify.Infrastructure.Migrations
                         .HasDatabaseName("IX_Documents_BusinessId_DocumentType");
 
                     b.ToTable("Documents", (string)null);
+                });
+
+            modelBuilder.Entity("Bookify.Domain.Entities.FavoriteBusiness", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BusinessId");
+
+                    b.HasIndex("UserId", "BusinessId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_FavoriteBusinesses_UserId_BusinessId");
+
+                    b.ToTable("FavoriteBusinesses", (string)null);
                 });
 
             modelBuilder.Entity("Bookify.Domain.Entities.Notification", b =>
@@ -1664,6 +1756,71 @@ namespace Bookify.Infrastructure.Migrations
                     b.ToTable("SubCategories", (string)null);
                 });
 
+            modelBuilder.Entity("Bookify.Domain.Entities.SupportTicket", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AppointmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<string>("ContactEmail")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppointmentId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_SupportTickets_UserId");
+
+                    b.ToTable("SupportTickets", (string)null);
+                });
+
             modelBuilder.Entity("Bookify.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1695,6 +1852,18 @@ namespace Bookify.Infrastructure.Migrations
 
                     b.Property<string>("FirstName")
                         .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("GoogleName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("GooglePictureUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("GoogleSubject")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -1781,6 +1950,11 @@ namespace Bookify.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_Users_Email")
                         .HasFilter("IsDeleted = 0");
+
+                    b.HasIndex("GoogleSubject")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Users_GoogleSubject")
+                        .HasFilter("IsDeleted = 0 AND GoogleSubject IS NOT NULL");
 
                     b.HasIndex("Role")
                         .HasDatabaseName("IX_Users_Role");
@@ -2056,6 +2230,17 @@ namespace Bookify.Infrastructure.Migrations
                     b.Navigation("Business");
                 });
 
+            modelBuilder.Entity("Bookify.Domain.Entities.ChatMessage", b =>
+                {
+                    b.HasOne("Bookify.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Bookify.Domain.Entities.Document", b =>
                 {
                     b.HasOne("Bookify.Domain.Entities.Appointment", "Appointment")
@@ -2087,6 +2272,25 @@ namespace Bookify.Infrastructure.Migrations
                     b.Navigation("Provider");
 
                     b.Navigation("UploadedBy");
+                });
+
+            modelBuilder.Entity("Bookify.Domain.Entities.FavoriteBusiness", b =>
+                {
+                    b.HasOne("Bookify.Domain.Entities.Business", "Business")
+                        .WithMany("Favorites")
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Bookify.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Business");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Bookify.Domain.Entities.Notification", b =>
@@ -2330,6 +2534,24 @@ namespace Bookify.Infrastructure.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("Bookify.Domain.Entities.SupportTicket", b =>
+                {
+                    b.HasOne("Bookify.Domain.Entities.Appointment", "Appointment")
+                        .WithMany()
+                        .HasForeignKey("AppointmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Bookify.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Appointment");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Bookify.Domain.Entities.UserPreference", b =>
                 {
                     b.HasOne("Bookify.Domain.Entities.User", "User")
@@ -2390,6 +2612,8 @@ namespace Bookify.Infrastructure.Migrations
                     b.Navigation("BusinessCategories");
 
                     b.Navigation("BusinessHours");
+
+                    b.Navigation("Favorites");
 
                     b.Navigation("Images");
 

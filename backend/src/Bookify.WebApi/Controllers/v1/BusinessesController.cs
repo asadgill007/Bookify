@@ -192,6 +192,26 @@ public class BusinessesController : ApiController
     }
 
     /// <summary>
+    /// Add gallery images (by URL) to a business. First image becomes cover.
+    /// </summary>
+    [HttpPost("{businessId}/images")]
+    [Authorize(Roles = "BusinessOwner,Admin")]
+    public async Task<IActionResult> AddImages(Guid businessId, [FromBody] AddBusinessImagesRequest request, CancellationToken cancellationToken)
+    {
+        var command = new AddBusinessImagesCommand
+        {
+            BusinessId = businessId,
+            UserId = GetUserId(),
+            ImageUrls = request.ImageUrls ?? new List<string>()
+        };
+
+        var result = await _mediator.Send(command, cancellationToken);
+        return result.IsSuccess
+            ? ApiOk(message: "Images added successfully.")
+            : HandleResult(result);
+    }
+
+    /// <summary>
     /// Resubmit a rejected business for review (business owner only).
     /// </summary>
     [HttpPost("{businessId}/resubmit")]
@@ -235,6 +255,11 @@ public class BusinessesController : ApiController
 
         return ApiCreated(new { result.Data!.ProviderId, result.Data.UserId }, "Provider added successfully.");
     }
+}
+
+public class AddBusinessImagesRequest
+{
+    public List<string>? ImageUrls { get; set; }
 }
 
 public class SetBusinessHoursRequest

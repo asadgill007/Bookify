@@ -192,6 +192,7 @@ builder.Services.Configure<Bookify.Infrastructure.Services.AISearchSettings>(bui
 builder.Services.Configure<Bookify.Infrastructure.Services.VirusScanSettings>(builder.Configuration.GetSection("VirusScan"));
 builder.Services.Configure<Bookify.Infrastructure.Services.PushNotificationSettings>(builder.Configuration.GetSection("PushNotifications"));
 builder.Services.Configure<Bookify.Infrastructure.Services.ChatSettings>(builder.Configuration.GetSection("Chat"));
+builder.Services.Configure<Bookify.Infrastructure.Services.ChatAiSettings>(builder.Configuration.GetSection("ChatAi"));
 
 var app = builder.Build();
 

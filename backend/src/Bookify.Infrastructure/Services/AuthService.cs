@@ -20,6 +20,7 @@ public class AuthService : IAuthService
     private readonly IPasswordHasher _passwordHasher;
     private readonly IEmailService _emailService;
     private readonly ICacheService _cacheService;
+    private readonly IGoogleIdTokenValidator _googleValidator;
     private readonly ILogger<AuthService> _logger;
 
     public AuthService(
@@ -28,6 +29,7 @@ public class AuthService : IAuthService
         IPasswordHasher passwordHasher,
         IEmailService emailService,
         ICacheService cacheService,
+        IGoogleIdTokenValidator googleValidator,
         ILogger<AuthService> logger)
     {
         _unitOfWork = unitOfWork;
@@ -35,6 +37,7 @@ public class AuthService : IAuthService
         _passwordHasher = passwordHasher;
         _emailService = emailService;
         _cacheService = cacheService;
+        _googleValidator = googleValidator;
         _logger = logger;
     }
 
@@ -325,5 +328,92 @@ public class AuthService : IAuthService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();
+    }
+
+    public async Task<Result<AuthResponse>> LoginWithGoogleAsync(
+        string idToken,
+        string? accountType,
+        CancellationToken cancellationToken = default)
+    {
+        var googleUser = await _googleValidator.ValidateAsync(idToken, cancellationToken);
+        if (googleUser == null)
+            return Result<AuthResponse>.Failure("Google sign-in failed: could not verify the ID token.", "INVALID_GOOGLE_TOKEN");
+
+        var normalizedEmail = googleUser.Email.Trim().ToLowerInvariant();
+
+        // Prefer the user linked to this Google subject; fall back to email match.
+        var user = await _unitOfWork.Users.GetByGoogleSubjectAsync(googleUser.Subject, cancellationToken)
+                   ?? await _unitOfWork.Users.GetByEmailAsync(normalizedEmail, cancellationToken);
+
+        if (user == null)
+        {
+            var role = MapAccountTypeToRole(accountType);
+            user = new User(
+                ParseFirstName(googleUser.Name, normalizedEmail),
+                ParseLastName(googleUser.Name),
+                normalizedEmail,
+                _passwordHasher.Hash(Guid.NewGuid().ToString("N") + "GoogleOnly"),
+                role);
+            user.LinkGoogleAccount(googleUser.Subject, googleUser.Name, googleUser.Picture);
+
+            await _unitOfWork.Users.AddAsync(user, cancellationToken);
+            await _unitOfWork.UserPreferences.AddAsync(new UserPreference(user.Id), cancellationToken);
+            await _unitOfWork.Notifications.AddAsync(
+                new Notification(user.Id, NotificationType.System,
+                    "Welcome to Bookify!",
+                    "Thank you for joining. Start exploring premium services near you."),
+                cancellationToken);
+        }
+        else
+        {
+            // Link the Google identity to an existing account matched by email.
+            if (user.GoogleSubject == null)
+                user.LinkGoogleAccount(googleUser.Subject, googleUser.Name, googleUser.Picture);
+        }
+
+        user.RecordLogin();
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var tokens = await _jwtService.GenerateTokensAsync(user.Id, user.Email, user.Role.ToString(), cancellationToken);
+
+        var refreshToken = new RefreshToken(
+            user.Id,
+            tokens.RefreshToken,
+            Guid.NewGuid().ToString(),
+            tokens.RefreshTokenExpiresAt);
+
+        await _unitOfWork.RefreshTokens.AddAsync(refreshToken, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("User logged in via Google: {Email} (ID {UserId})", user.Email, user.Id);
+
+        return Result<AuthResponse>.Success(new AuthResponse
+        {
+            UserId = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            Role = user.Role.ToString(),
+            AccessToken = tokens.AccessToken,
+            RefreshToken = tokens.RefreshToken,
+            ExpiresIn = tokens.ExpiresInSeconds
+        });
+    }
+
+    private static string ParseFirstName(string? fullName, string fallbackEmail)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+            return fallbackEmail.Split('@')[0][..Math.Min(20, fallbackEmail.Split('@')[0].Length)];
+        var parts = fullName.Trim().Split(' ');
+        return parts[0][..Math.Min(50, parts[0].Length)];
+    }
+
+    private static string ParseLastName(string? fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName)) return "";
+        var parts = fullName.Trim().Split(' ');
+        if (parts.Length < 2) return "";
+        var lastName = string.Join(" ", parts.Skip(1));
+        return lastName.Length > 50 ? lastName[..50] : lastName;
     }
 }

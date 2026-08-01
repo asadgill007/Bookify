@@ -4,8 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart';
 import '../../auth/providers/auth_provider.dart';
-
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
+import '../providers/app_settings_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -17,7 +16,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _pushNotifications = true;
   bool _emailNotifications = false;
-  String _language = 'English';
   bool _isDeleting = false;
 
   Future<void> _showChangePasswordDialog() async {
@@ -117,23 +115,92 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _showLanguageDialog() async {
-    const languages = ['English', 'Urdu'];
+    final settings = ref.read(appSettingsProvider);
     await showDialog<void>(
       context: context,
       builder: (ctx) => SimpleDialog(
         title: const Text('Select Language'),
-        children: languages.map((lang) {
-          return SimpleDialogOption(
-            onPressed: () {
-              setState(() => _language = lang);
-              Navigator.pop(ctx);
+        children: [
+          SimpleDialogOption(
+            onPressed: () async {
+              await ref.read(appSettingsProvider.notifier).setLocale(const Locale('en'));
+              if (ctx.mounted) Navigator.pop(ctx);
             },
-            child: Text(
-              lang,
-              style: TextStyle(
-                fontWeight: lang == _language ? FontWeight.bold : FontWeight.normal,
-                color: lang == _language ? Theme.of(ctx).colorScheme.primary : null,
-              ),
+            child: Row(
+              children: [
+                const Icon(Icons.language, size: 20),
+                const SizedBox(width: 12),
+                Text('English',
+                    style: TextStyle(
+                      fontWeight: settings.locale.languageCode == 'en'
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: settings.locale.languageCode == 'en'
+                          ? Theme.of(ctx).colorScheme.primary
+                          : null,
+                    )),
+                if (settings.locale.languageCode == 'en')
+                  const Icon(Icons.check, size: 18),
+              ],
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () async {
+              await ref.read(appSettingsProvider.notifier).setLocale(const Locale('ur'));
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: Row(
+              children: [
+                const Icon(Icons.language, size: 20),
+                const SizedBox(width: 12),
+                Text('اردو (Urdu)',
+                    style: TextStyle(
+                      fontWeight: settings.locale.languageCode == 'ur'
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: settings.locale.languageCode == 'ur'
+                          ? Theme.of(ctx).colorScheme.primary
+                          : null,
+                    )),
+                if (settings.locale.languageCode == 'ur')
+                  const Icon(Icons.check, size: 18),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showCurrencyDialog() async {
+    final settings = ref.read(appSettingsProvider);
+    final currenciesAsync = ref.read(currenciesProvider);
+    final currencies = currenciesAsync.valueOrNull ?? fallbackCurrencies;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Select Currency'),
+        children: currencies.map((c) {
+          return SimpleDialogOption(
+            onPressed: () async {
+              await ref
+                  .read(appSettingsProvider.notifier)
+                  .setCurrency(c.code);
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 40,
+                  child: Text(c.symbol,
+                      style: const TextStyle(fontSize: 16)),
+                ),
+                Expanded(child: Text(c.name)),
+                if (settings.currency == c.code)
+                  const Icon(Icons.check, size: 18,
+                      color: Colors.green),
+              ],
             ),
           );
         }).toList(),
@@ -184,7 +251,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final themeMode = ref.watch(themeModeProvider);
+    final settings = ref.watch(appSettingsProvider);
+    final themeMode = settings.themeMode;
+    final languageLabel =
+        settings.locale.languageCode == 'ur' ? 'اردو (Urdu)' : 'English';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -208,7 +278,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode)),
                     ],
                     selected: {themeMode},
-                    onSelectionChanged: (selected) => ref.read(themeModeProvider.notifier).state = selected.first,
+                    onSelectionChanged: (selected) => ref
+                        .read(appSettingsProvider.notifier)
+                        .setThemeMode(selected.first),
                   ),
                 ),
               ],
@@ -220,12 +292,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Text('Language', style: theme.textTheme.titleSmall?.copyWith(color: colorScheme.primary)),
           const SizedBox(height: 8),
           Card(
-            child: ListTile(
-              leading: const Icon(Icons.language_outlined),
-              title: const Text('Language'),
-              subtitle: Text(_language),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _showLanguageDialog,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.language_outlined),
+                  title: const Text('Language'),
+                  subtitle: Text(languageLabel),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _showLanguageDialog,
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.currency_exchange_outlined),
+                  title: const Text('Currency'),
+                  subtitle: Text(settings.currency),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _showCurrencyDialog,
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),

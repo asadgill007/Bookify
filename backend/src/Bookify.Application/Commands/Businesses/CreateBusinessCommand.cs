@@ -62,11 +62,16 @@ public sealed class CreateBusinessCommandValidator : AbstractValidator<CreateBus
 public sealed class CreateBusinessCommandHandler : IRequestHandler<CreateBusinessCommand, Result<BusinessCreatedResult>>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IBusinessVerificationService _verificationService;
     private readonly ILogger<CreateBusinessCommandHandler> _logger;
 
-    public CreateBusinessCommandHandler(IUnitOfWork unitOfWork, ILogger<CreateBusinessCommandHandler> logger)
+    public CreateBusinessCommandHandler(
+        IUnitOfWork unitOfWork,
+        IBusinessVerificationService verificationService,
+        ILogger<CreateBusinessCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
+        _verificationService = verificationService;
         _logger = logger;
     }
 
@@ -109,6 +114,12 @@ public sealed class CreateBusinessCommandHandler : IRequestHandler<CreateBusines
 
         await _unitOfWork.Businesses.AddAsync(business, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Auto-verification: if the listing is already complete it goes live
+        // immediately without needing an admin.
+        var checklist = await _verificationService.EvaluateAndAutoVerifyAsync(business.Id, cancellationToken);
+        if (checklist.IsComplete)
+            _logger.LogInformation("Business {BusinessId} auto-verified on creation.", business.Id);
 
         _logger.LogInformation("User {UserId} created business {BusinessId} ({Name})", request.UserId, business.Id, request.Name);
 

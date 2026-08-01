@@ -29,6 +29,9 @@ import '../../features/help/screens/help_center_screen.dart';
 import '../../features/about/screens/about_screen.dart';
 import '../../features/privacy/screens/privacy_screen.dart';
 import '../../features/terms/screens/terms_screen.dart';
+import '../../features/favorites/screens/favorites_screen.dart';
+import '../../features/chat/screens/chat_screen.dart';
+import '../../features/support/screens/contact_support_screen.dart';
 
 /// Auth guard redirect logic.
 final authGuardProvider = Provider.family<String?, String>((ref, path) {
@@ -68,6 +71,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         '/admin/review',
         '/my-waitlist',
         '/my-recurring',
+        '/favorites',
+        '/chat',
+        '/contact-support',
+        '/report-problem',
       ];
 
       final isProtectedRoute = protectedRoutes.any(
@@ -205,6 +212,35 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/my-recurring',
         name: 'my-recurring',
         builder: (context, state) => const MyRecurringBookingsScreen(),
+      ),
+      GoRoute(
+        path: '/favorites',
+        name: 'favorites',
+        builder: (context, state) => const FavoritesScreen(),
+      ),
+      GoRoute(
+        path: '/chat',
+        name: 'chat',
+        builder: (context, state) => const ChatScreen(),
+      ),
+      GoRoute(
+        path: '/contact-support',
+        name: 'contact-support',
+        builder: (context, state) => const ContactSupportScreen(),
+      ),
+      GoRoute(
+        path: '/report-problem',
+        name: 'report-problem',
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is Map<String, dynamic>) {
+            return ContactSupportScreen(
+              appointmentId: extra['appointmentId'] as String?,
+              businessName: extra['businessName'] as String?,
+            );
+          }
+          return const ContactSupportScreen();
+        },
       ),
       GoRoute(
         path: '/help',

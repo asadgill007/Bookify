@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../reviews/screens/reviews_section.dart';
+import '../../favorites/providers/favorites_provider.dart';
+import '../../settings/providers/app_settings_provider.dart';
 import '../providers/business_detail_provider.dart';
 
 /// Premium Business Detail screen, wired to the real API by slug.
@@ -17,8 +19,6 @@ class BusinessDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
-  bool _isFavorite = false;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -64,7 +64,8 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
               ),
             ),
           ),
-          data: (business) => _buildDetail(context, theme, colorScheme, isDark, business),
+          data: (business) =>
+              _buildDetail(context, theme, colorScheme, isDark, business),
         ),
       ),
     );
@@ -77,6 +78,11 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
     bool isDark,
     BusinessDetail business,
   ) {
+    // Currency conversion: display prices in the user's selected currency.
+    final settings = ref.watch(appSettingsProvider);
+    final currenciesAsync = ref.watch(currenciesProvider);
+    final rates = currenciesAsync.valueOrNull ?? fallbackCurrencies;
+    final displayCurrency = settings.currency;
     final coverUrl = business.coverImageUrl ??
         (business.gallery.isNotEmpty ? business.gallery.first : null);
     final gallery = business.gallery.isNotEmpty
@@ -145,19 +151,7 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
                 actions: [
                   Padding(
                     padding: const EdgeInsets.all(8),
-                    child: GlassContainer(
-                      borderRadius: AppTheme.radiusFull,
-                      width: 44, height: 44,
-                      padding: EdgeInsets.zero,
-                      child: IconButton(
-                        icon: Icon(
-                          _isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color: _isFavorite ? Colors.red : Colors.white,
-                          size: 22,
-                        ),
-                        onPressed: () => setState(() => _isFavorite = !_isFavorite),
-                      ),
-                    ),
+                    child: _FavoriteHeart(businessId: business.id),
                   ),
                 ],
               ).animate().fadeIn(duration: 400.ms),
@@ -375,8 +369,12 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
                               ),
                             ),
                             Text(
-                              '${business.currency == 'USD' ? '\$' : ''}'
-                              '${service.price.toStringAsFixed(2)}',
+                              formatConvertedPrice(
+                                service.price,
+                                business.currency,
+                                displayCurrency,
+                                rates,
+                              ),
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: AppTheme.indigoLuxury,
@@ -536,6 +534,21 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
                 ),
               ),
 
+              // Report a problem
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: TextButton.icon(
+                    onPressed: () => context.push('/report-problem'),
+                    icon: const Icon(Icons.report_problem_outlined, size: 18),
+                    label: const Text('Report a Problem'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           ),
@@ -543,49 +556,110 @@ class _BusinessDetailScreenState extends ConsumerState<BusinessDetailScreen> {
 
         // Sticky Book Now button
         if (business.services.isNotEmpty && business.providers.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          _stickyBookButton(context, isDark, business),
+      ],
+    );
+  }
+
+  Widget _stickyBookButton(
+    BuildContext context,
+    bool isDark,
+    BusinessDetail business,
+  ) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            isDark ? AppTheme.slate900.withValues(alpha: 0) : AppTheme.slate50.withValues(alpha: 0),
+            isDark ? AppTheme.slate900 : AppTheme.slate50,
+          ],
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  isDark ? AppTheme.slate900.withValues(alpha: 0) : AppTheme.slate50.withValues(alpha: 0),
-                  isDark ? AppTheme.slate900 : AppTheme.slate50,
-                ],
+                colors: [AppTheme.indigoLuxury, const Color(0xFF7C3AED)],
+                begin: Alignment.topLeft, end: Alignment.bottomRight,
               ),
+              borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+              boxShadow: AppTheme.indigoGlowShadow,
             ),
-            child: SafeArea(
-              top: false,
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppTheme.indigoLuxury, const Color(0xFF7C3AED)],
-                      begin: Alignment.topLeft, end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusFull),
-                    boxShadow: AppTheme.indigoGlowShadow,
-                  ),
-                  child: MaterialButton(
-                    onPressed: () => context.push(
-                      '/booking/${business.slug}/${business.services.first.id}',
-                    ),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppTheme.radiusFull)),
-                    child: const Text(
-                      'Book Now',
-                      style: TextStyle(
-                          color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
+            child: MaterialButton(
+              onPressed: () => context.push(
+                '/booking/${business.slug}/${business.services.first.id}',
+              ),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusFull)),
+              child: const Text(
+                'Book Now',
+                style: TextStyle(
+                    color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
           ),
-      ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Favorite heart wired to the backend favorites API.
+class _FavoriteHeart extends ConsumerWidget {
+  final String businessId;
+  const _FavoriteHeart({required this.businessId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final isFavorite = ref.watch(isFavoriteProvider(businessId));
+
+    return GlassContainer(
+      borderRadius: AppTheme.radiusFull,
+      width: 44,
+      height: 44,
+      padding: EdgeInsets.zero,
+      child: IconButton(
+        icon: Icon(
+          isFavorite ? Icons.favorite : Icons.favorite_border,
+          color: isFavorite ? Colors.red : Colors.white,
+          size: 22,
+        ),
+        onPressed: () async {
+          final toast = ScaffoldMessenger.of(context);
+          try {
+            final nowFav = await ref
+                .read(favoritesActionsProvider)
+                .toggle(businessId);
+            if (context.mounted) {
+              toast.hideCurrentSnackBar();
+              toast.showSnackBar(SnackBar(
+                duration: const Duration(seconds: 1),
+                content: Text(
+                  nowFav
+                      ? 'Added to favorites'
+                      : 'Removed from favorites',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ));
+            }
+          } catch (_) {
+            if (context.mounted) {
+              toast.hideCurrentSnackBar();
+              toast.showSnackBar(
+                SnackBar(content: Text('Could not update favorite. Please try again.')),
+              );
+            }
+          }
+        },
+      ),
     );
   }
 }

@@ -42,15 +42,18 @@ public sealed class SetBusinessHoursCommandHandler : IRequestHandler<SetBusiness
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPermissionService _permissionService;
+    private readonly IBusinessVerificationService _verificationService;
     private readonly ILogger<SetBusinessHoursCommandHandler> _logger;
 
     public SetBusinessHoursCommandHandler(
         IUnitOfWork unitOfWork,
         IPermissionService permissionService,
+        IBusinessVerificationService verificationService,
         ILogger<SetBusinessHoursCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _permissionService = permissionService;
+        _verificationService = verificationService;
         _logger = logger;
     }
 
@@ -74,6 +77,9 @@ public sealed class SetBusinessHoursCommandHandler : IRequestHandler<SetBusiness
 
         await _unitOfWork.BusinessHours.ReplaceForBusinessAsync(business.Id, entries, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Setting opening hours is a key checklist item — re-evaluate.
+        await _verificationService.EvaluateAndAutoVerifyAsync(business.Id, cancellationToken);
 
         _logger.LogInformation("Business hours set for business {BusinessId} by {UserId} ({Count} days)",
             business.Id, request.UserId, entries.Count);

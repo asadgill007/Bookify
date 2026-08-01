@@ -180,11 +180,8 @@ class ProfileScreen extends ConsumerWidget {
                                 () => context.push('/admin/review')),
                           if (authState.role == 'Admin')
                             const Divider(height: 1),
-                          _buildMenuItem(Icons.favorite_outline, 'Favorites', () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Favorites coming soon')),
-                            );
-                          }),
+                          _buildMenuItem(Icons.favorite_outline, 'Favorites',
+                              () => context.push('/favorites')),
                           const Divider(height: 1),
                           _buildMenuItem(Icons.notifications_outlined, 'Notifications', () => context.push('/notifications')),
                         ],
@@ -194,6 +191,9 @@ class ProfileScreen extends ConsumerWidget {
                     Card(
                       child: Column(
                         children: [
+                          _buildMenuItem(Icons.support_agent_outlined, 'Contact Support',
+                              () => context.push('/contact-support')),
+                          const Divider(height: 1),
                           _buildMenuItem(Icons.help_outline, 'Help Center', () => context.push('/help')),
                           const Divider(height: 1),
                           _buildMenuItem(Icons.info_outline, 'About', () => context.push('/about')),

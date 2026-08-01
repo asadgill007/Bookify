@@ -73,26 +73,47 @@ public sealed class SearchBusinessesQueryHandler : IRequestHandler<SearchBusines
 
         var totalCount = await _unitOfWork.Businesses.SearchCountAsync(
             request.Search, categoryId, request.Latitude, request.Longitude, request.RadiusKm,
-            effectiveVerified, cancellationToken);
+            effectiveVerified, request.PriceMin, request.PriceMax, cancellationToken);
 
-        var items = businesses.Select(b => new BusinessSearchResult
+        var items = businesses.Select(b =>
         {
-            Id = b.Id,
-            Name = b.Name,
-            Slug = b.Slug,
-            Description = b.Description,
-            Category = b.BusinessCategories.FirstOrDefault()?.Category?.Name,
-            AverageRating = b.AverageRating,
-            TotalReviews = b.TotalReviews,
-            CoverImageUrl = b.Images.FirstOrDefault(i => i.IsCover)?.Url ?? b.CoverImageUrl,
-            City = b.City,
-            Country = b.Country,
-            DistanceKm = null, // Calculate from geo if needed
-            IsVerified = b.IsVerified,
-            IsOpenNow = true // Simplified; real logic checks current availability
+            double? distanceKm = null;
+            if (request.Latitude.HasValue && request.Longitude.HasValue && b.Latitude.HasValue && b.Longitude.HasValue)
+            {
+                distanceKm = HaversineKm(request.Latitude.Value, request.Longitude.Value, b.Latitude.Value, b.Longitude.Value);
+            }
+
+            return new BusinessSearchResult
+            {
+                Id = b.Id,
+                Name = b.Name,
+                Slug = b.Slug,
+                Description = b.Description,
+                Category = b.BusinessCategories.FirstOrDefault()?.Category?.Name,
+                AverageRating = b.AverageRating,
+                TotalReviews = b.TotalReviews,
+                CoverImageUrl = b.Images.FirstOrDefault(i => i.IsCover)?.Url ?? b.CoverImageUrl,
+                City = b.City,
+                Country = b.Country,
+                DistanceKm = distanceKm,
+                IsVerified = b.IsVerified,
+                IsOpenNow = true // Simplified; real logic checks current availability
+            };
         }).ToList();
 
         return Result<PaginatedList<BusinessSearchResult>>.Success(
             new PaginatedList<BusinessSearchResult>(items, request.Page, request.PageSize, totalCount));
+    }
+
+    private static double HaversineKm(double lat1, double lon1, double lat2, double lon2)
+    {
+        const double r = 6371.0;
+        var dLat = (lat2 - lat1) * Math.PI / 180.0;
+        var dLon = (lon2 - lon1) * Math.PI / 180.0;
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                Math.Cos(lat1 * Math.PI / 180.0) * Math.Cos(lat2 * Math.PI / 180.0) *
+                Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        return Math.Round(r * c, 1);
     }
 }

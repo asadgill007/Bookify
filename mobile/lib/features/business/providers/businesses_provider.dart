@@ -68,25 +68,56 @@ final businessesProvider = FutureProvider<List<Business>>((ref) async {
   return [];
 });
 
-/// Search intent carried through navigation: a text query and/or a category slug.
+/// Search intent carried through navigation: text query, category, and
+/// advanced filters (price range, minimum rating, distance radius).
 class SearchIntent {
   final String query;
   final String? categorySlug;
+  final double? priceMin;
+  final double? priceMax;
+  final double? ratingMin;
+  final double? radiusKm;
+  final double? latitude;
+  final double? longitude;
 
-  const SearchIntent({this.query = '', this.categorySlug});
+  const SearchIntent({
+    this.query = '',
+    this.categorySlug,
+    this.priceMin,
+    this.priceMax,
+    this.ratingMin,
+    this.radiusKm,
+    this.latitude,
+    this.longitude,
+  });
+
+  bool get hasFilters =>
+      categorySlug != null ||
+      priceMin != null ||
+      priceMax != null ||
+      ratingMin != null ||
+      radiusKm != null;
 }
 
-/// Provider that searches businesses by query string and/or category slug.
+/// Provider that searches businesses by query string, category slug and
+/// advanced filters (price range, rating, distance radius).
 final searchResultsProvider =
     FutureProvider.family<List<Business>, SearchIntent>((ref, intent) async {
-  if (intent.query.isEmpty && intent.categorySlug == null) return [];
+  // Nothing entered and no filters: show the empty state without calling the API.
+  if (intent.query.isEmpty && !intent.hasFilters) return [];
 
   final api = ref.watch(apiClientProvider);
   final response = await api.get(ApiConstants.businesses, queryParameters: {
     'page': 1,
-    'pageSize': 20,
+    'pageSize': 50,
     if (intent.query.isNotEmpty) 'search': intent.query,
     if (intent.categorySlug != null) 'category': intent.categorySlug,
+    if (intent.priceMin != null) 'priceMin': intent.priceMin,
+    if (intent.priceMax != null) 'priceMax': intent.priceMax,
+    if (intent.ratingMin != null) 'ratingMin': intent.ratingMin,
+    if (intent.radiusKm != null) 'radiusKm': intent.radiusKm,
+    if (intent.latitude != null) 'latitude': intent.latitude,
+    if (intent.longitude != null) 'longitude': intent.longitude,
   });
 
   final data = response.data;

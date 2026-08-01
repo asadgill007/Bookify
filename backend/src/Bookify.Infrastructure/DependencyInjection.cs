@@ -69,11 +69,15 @@ public static class DependencyInjection
         services.AddScoped<IRecurringBookingRepository, RecurringBookingRepository>();
         services.AddScoped<IWaitlistRepository, WaitlistRepository>();
         services.AddScoped<IDocumentRepository, DocumentRepository>();
+        services.AddScoped<IFavoriteRepository, FavoriteRepository>();
+        services.AddScoped<IChatMessageRepository, ChatMessageRepository>();
+        services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
 
         // Authentication
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IGoogleIdTokenValidator, GoogleIdTokenValidator>();
 
         // Services
         services.AddScoped<IPaymentService, StripePaymentService>();
@@ -93,6 +97,9 @@ public static class DependencyInjection
         services.AddScoped<IVirusScanService, VirusScanService>();
         services.AddScoped<IPushNotificationService, PushNotificationService>();
         services.AddScoped<IChatService, ChatService>();
+        services.AddScoped<IBusinessVerificationService, BusinessVerificationService>();
+        services.AddScoped<IChatAiService, RuleBasedChatAiService>();
+        services.AddSingleton<ICurrencyConversionService, CurrencyConversionService>();
         services.AddSingleton<IOpenTelemetryService, Services.OpenTelemetryService>();
 
         // ── Caching ──

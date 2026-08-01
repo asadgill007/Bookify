@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../settings/providers/app_settings_provider.dart';
 import '../../recurring/providers/recurring_bookings_provider.dart';
 import 'booking_screen.dart';
 
@@ -62,6 +63,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final draft = GoRouterState.of(context).extra as BookingDraft?;
+
+    // Currency conversion: display the total in the user's selected currency.
+    final settings = ref.watch(appSettingsProvider);
+    final currenciesAsync = ref.watch(currenciesProvider);
+    final rates = currenciesAsync.valueOrNull ?? fallbackCurrencies;
+    final convertedTotal = formatConvertedPrice(
+      draft?.price ?? 0,
+      draft?.currency ?? 'USD',
+      settings.currency,
+      rates,
+    );
 
     if (draft == null) {
       return Scaffold(
@@ -122,7 +134,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             const Divider(height: 24, color: AppTheme.slate200),
                             _buildPriceRow(
                                 'Total',
-                                '${draft.currency == 'USD' ? '\$' : ''}${draft.price.toStringAsFixed(2)}',
+                                convertedTotal,
                                 theme,
                                 colorScheme,
                                 isBold: true),
@@ -212,9 +224,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                   color: Colors.white, strokeWidth: 2),
                             )
                           : Text(
-                              'Confirm Booking — '
-                              '${draft.currency == 'USD' ? '\$' : ''}'
-                              '${draft.price.toStringAsFixed(2)}',
+                              'Confirm Booking — $convertedTotal',
                               style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,

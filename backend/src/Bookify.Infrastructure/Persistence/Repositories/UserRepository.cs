@@ -13,8 +13,9 @@ public class UserRepository : BaseRepository<User>, IUserRepository
 
     public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
+        // TRACKED on purpose: auth flows mutate the returned user (RecordLogin,
+        // LinkGoogleAccount, password change) and rely on SaveChangesAsync.
         return await DbSet
-            .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Email == email.ToLowerInvariant().Trim(), cancellationToken);
     }
 
@@ -67,5 +68,12 @@ public class UserRepository : BaseRepository<User>, IUserRepository
         return await DbSet
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+    }
+
+    public async Task<User?> GetByGoogleSubjectAsync(string googleSubject, CancellationToken cancellationToken = default)
+    {
+        // TRACKED so Google account linking persists via SaveChangesAsync.
+        return await DbSet
+            .FirstOrDefaultAsync(u => u.GoogleSubject == googleSubject, cancellationToken);
     }
 }

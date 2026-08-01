@@ -74,6 +74,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return GradientBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
+        floatingActionButton: FloatingActionButton.extended(
+          heroTag: 'chatFab',
+          onPressed: () => context.push('/chat'),
+          backgroundColor: AppTheme.indigoLuxury,
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.auto_awesome_rounded),
+          label: const Text('AI Assistant'),
+        ),
         body: SafeArea(
           child: RefreshIndicator(
             onRefresh: () async {

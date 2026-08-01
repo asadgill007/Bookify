@@ -29,6 +29,9 @@ public class UnitOfWork : IUnitOfWork
     public IRecurringBookingRepository RecurringBookings { get; }
     public IWaitlistRepository Waitlist { get; }
     public IDocumentRepository Documents { get; }
+    public IFavoriteRepository Favorites { get; }
+    public IChatMessageRepository ChatMessages { get; }
+    public ISupportTicketRepository SupportTickets { get; }
 
     public UnitOfWork(
         AppDbContext context,
@@ -48,7 +51,10 @@ public class UnitOfWork : IUnitOfWork
         IRefreshTokenRepository refreshTokens,
         IRecurringBookingRepository recurringBookings,
         IWaitlistRepository waitlist,
-        IDocumentRepository documents)
+        IDocumentRepository documents,
+        IFavoriteRepository favorites,
+        IChatMessageRepository chatMessages,
+        ISupportTicketRepository supportTickets)
     {
         _context = context;
         _mediator = mediator;
@@ -68,6 +74,9 @@ public class UnitOfWork : IUnitOfWork
         RecurringBookings = recurringBookings;
         Waitlist = waitlist;
         Documents = documents;
+        Favorites = favorites;
+        ChatMessages = chatMessages;
+        SupportTickets = supportTickets;
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

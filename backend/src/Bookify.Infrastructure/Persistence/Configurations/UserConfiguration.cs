@@ -97,6 +97,20 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.SuspensionReason)
             .HasMaxLength(500);
 
+        builder.Property(u => u.GoogleSubject)
+            .HasMaxLength(100);
+
+        builder.Property(u => u.GoogleName)
+            .HasMaxLength(200);
+
+        builder.Property(u => u.GooglePictureUrl)
+            .HasMaxLength(1000);
+
+        builder.HasIndex(u => u.GoogleSubject)
+            .IsUnique()
+            .HasFilter("IsDeleted = 0 AND GoogleSubject IS NOT NULL")
+            .HasDatabaseName("IX_Users_GoogleSubject");
+
         builder.Property(u => u.IsDeleted)
             .IsRequired()
             .HasDefaultValue(false);

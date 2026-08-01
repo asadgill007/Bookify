@@ -194,6 +194,10 @@ class _MyBusinessesScreenState extends ConsumerState<MyBusinessesScreen> {
           ),
           const SizedBox(height: 14),
           _buildStatusBanner(theme, colorScheme, biz),
+          if (!biz.isApproved && biz.checklist.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _buildChecklist(theme, colorScheme, biz),
+          ],
           if (biz.isRejected && biz.rejectionReason != null) ...[
             const SizedBox(height: 12),
             Container(
@@ -265,6 +269,85 @@ class _MyBusinessesScreenState extends ConsumerState<MyBusinessesScreen> {
         ],
       ),
     ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1);
+  }
+
+  /// Checklist panel shown while the business is not yet auto-verified.
+  Widget _buildChecklist(
+      ThemeData theme, ColorScheme colorScheme, MyBusiness biz) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                biz.isChecklistComplete
+                    ? Icons.check_circle_outline
+                    : Icons.fact_check_outlined,
+                size: 18,
+                color: biz.isChecklistComplete
+                    ? AppTheme.success
+                    : AppTheme.warning,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  biz.isChecklistComplete
+                      ? 'All set — your business will auto-verify on the next refresh.'
+                      : 'Complete these steps to get verified automatically:',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...biz.checklist.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    item.isComplete
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked,
+                    size: 18,
+                    color: item.isComplete
+                        ? AppTheme.success
+                        : colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item.label,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: item.isComplete
+                            ? colorScheme.onSurfaceVariant
+                            : colorScheme.onSurface,
+                        decoration: item.isComplete
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildStatusBanner(

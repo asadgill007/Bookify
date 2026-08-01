@@ -24,4 +24,15 @@ public interface IAuthService
     Task<Result> ForgotPasswordAsync(string email, CancellationToken cancellationToken = default);
     Task<Result> ResetPasswordAsync(string email, string token, string newPassword, CancellationToken cancellationToken = default);
     Task<Result> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Authenticates with a Google ID token. If the user already exists
+    /// (matched by Google subject or email) they are signed in; otherwise a
+    /// new account is created (Customer by default — users can upgrade to a
+    /// provider/business owner later).
+    /// </summary>
+    Task<Result<AuthResponse>> LoginWithGoogleAsync(
+        string idToken,
+        string? accountType,
+        CancellationToken cancellationToken = default);
 }

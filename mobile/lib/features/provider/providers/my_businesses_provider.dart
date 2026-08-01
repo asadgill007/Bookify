@@ -2,6 +2,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
 
+/// One item of the auto-verification checklist (mirrors the backend DTO).
+class BusinessChecklistItem {
+  final String key;
+  final String label;
+  final bool isComplete;
+
+  const BusinessChecklistItem({
+    required this.key,
+    required this.label,
+    required this.isComplete,
+  });
+
+  factory BusinessChecklistItem.fromJson(Map<String, dynamic> json) =>
+      BusinessChecklistItem(
+        key: json['key'] as String? ?? '',
+        label: json['label'] as String? ?? '',
+        isComplete: json['isComplete'] as bool? ?? false,
+      );
+}
+
 /// My business summary from GET /businesses/mine.
 class MyBusiness {
   final String id;
@@ -17,6 +37,10 @@ class MyBusiness {
   final int totalProviders;
   final String? coverImageUrl;
 
+  /// Auto-verification checklist state (provider dashboard).
+  final bool isChecklistComplete;
+  final List<BusinessChecklistItem> checklist;
+
   const MyBusiness({
     required this.id,
     required this.name,
@@ -30,6 +54,8 @@ class MyBusiness {
     required this.totalServices,
     required this.totalProviders,
     this.coverImageUrl,
+    this.isChecklistComplete = false,
+    this.checklist = const [],
   });
 
   bool get isPending => verificationStatus.toLowerCase() == 'pending';
@@ -50,6 +76,10 @@ class MyBusiness {
       totalServices: json['totalServices'] as int? ?? 0,
       totalProviders: json['totalProviders'] as int? ?? 0,
       coverImageUrl: json['coverImageUrl'] as String?,
+      isChecklistComplete: json['isChecklistComplete'] as bool? ?? false,
+      checklist: (json['checklist'] as List<dynamic>? ?? [])
+          .map((e) => BusinessChecklistItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 }

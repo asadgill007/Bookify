@@ -56,15 +56,18 @@ public sealed class UpdateBusinessCommandHandler : IRequestHandler<UpdateBusines
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPermissionService _permissionService;
+    private readonly IBusinessVerificationService _verificationService;
     private readonly ILogger<UpdateBusinessCommandHandler> _logger;
 
     public UpdateBusinessCommandHandler(
         IUnitOfWork unitOfWork,
         IPermissionService permissionService,
+        IBusinessVerificationService verificationService,
         ILogger<UpdateBusinessCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _permissionService = permissionService;
+        _verificationService = verificationService;
         _logger = logger;
     }
 
@@ -111,6 +114,10 @@ public sealed class UpdateBusinessCommandHandler : IRequestHandler<UpdateBusines
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Re-evaluate the checklist after every save so the business goes live
+        // automatically the moment all required info is present.
+        await _verificationService.EvaluateAndAutoVerifyAsync(business.Id, cancellationToken);
 
         _logger.LogInformation("Business {BusinessId} updated by {UserId}", business.Id, request.UserId);
         return Result.Success();

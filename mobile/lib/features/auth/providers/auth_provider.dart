@@ -163,6 +163,48 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Signs in with a Google ID token via the backend. Creates a Customer
+  /// account on first sign-in, or links/signs in an existing user.
+  /// Returns true on success. [accountType] only applies to brand-new accounts.
+  Future<bool> googleSignIn({
+    required String idToken,
+    String accountType = AccountType.customer,
+  }) async {
+    state = state.copyWith(status: AuthStatus.authenticating, error: null);
+    try {
+      final api = _ref.read(apiClientProvider);
+      final response = await api.post(
+        ApiConstants.googleLogin,
+        data: {'idToken': idToken, 'accountType': accountType},
+      );
+
+      final body = response.data as Map<String, dynamic>;
+      final data = (body['data'] ?? body) as Map<String, dynamic>;
+
+      final accessToken = data['accessToken'] as String?;
+      final refreshToken = data['refreshToken'] as String?;
+      if (accessToken == null) {
+        throw Exception('No access token in response');
+      }
+
+      await api.saveTokens(accessToken, refreshToken ?? '');
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        email: data['email'] as String?,
+        userId: data['userId'] as String?,
+        role: data['role'] as String?,
+        error: null,
+      );
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        error: 'Google sign-in failed. Please try again.',
+      );
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     final api = _ref.read(apiClientProvider);
     await api.clearTokens();

@@ -27,11 +27,20 @@ public interface IUserRepository : IRepository<Domain.Entities.User>
         bool? suspendedFilter,
         CancellationToken cancellationToken = default);
     Task<Domain.Entities.User?> GetWithRoleAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<Domain.Entities.User?> GetByGoogleSubjectAsync(string googleSubject, CancellationToken cancellationToken = default);
 }
 
 public interface IBusinessRepository : IRepository<Domain.Entities.Business>
 {
     Task<Domain.Entities.Business?> GetBySlugAsync(string slug, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Loads a business with all detail collections (categories, images,
+    /// services, hours, providers) populated. Used by verification and
+    /// provider-dashboard flows that need the full picture.
+    /// </summary>
+    Task<Domain.Entities.Business?> GetByIdWithDetailsAsync(Guid businessId, CancellationToken cancellationToken = default);
+    Task AddImageAsync(Domain.Entities.BusinessImage image, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Domain.Entities.Business>> GetByOwnerIdAsync(Guid ownerId, CancellationToken cancellationToken = default);
     Task<int> GetCountAsync(bool? verifiedFilter = null, bool? activeFilter = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Domain.Entities.Business>> GetFilteredAsync(
@@ -74,6 +83,8 @@ public interface IBusinessRepository : IRepository<Domain.Entities.Business>
         double? longitude,
         double? radiusKm,
         bool? isVerified = null,
+        decimal? minPrice = null,
+        decimal? maxPrice = null,
         CancellationToken cancellationToken = default);
 }
 

@@ -44,6 +44,7 @@ public sealed class Business : BaseEntity
     public ICollection<BusinessImage> Images { get; private set; } = new List<BusinessImage>();
     public ICollection<BusinessCategory> BusinessCategories { get; private set; } = new List<BusinessCategory>();
     public ICollection<BusinessHours> BusinessHours { get; private set; } = new List<BusinessHours>();
+    public ICollection<FavoriteBusiness> Favorites { get; private set; } = new List<FavoriteBusiness>();
 
     private Business() { }
 

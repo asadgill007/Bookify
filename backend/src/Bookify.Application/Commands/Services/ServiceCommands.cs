@@ -39,15 +39,18 @@ public sealed class CreateServiceCommandHandler : IRequestHandler<CreateServiceC
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPermissionService _permissionService;
+    private readonly IBusinessVerificationService _verificationService;
     private readonly ILogger<CreateServiceCommandHandler> _logger;
 
     public CreateServiceCommandHandler(
         IUnitOfWork unitOfWork,
         IPermissionService permissionService,
+        IBusinessVerificationService verificationService,
         ILogger<CreateServiceCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _permissionService = permissionService;
+        _verificationService = verificationService;
         _logger = logger;
     }
 
@@ -71,6 +74,9 @@ public sealed class CreateServiceCommandHandler : IRequestHandler<CreateServiceC
 
         await _unitOfWork.Services.AddAsync(service, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Adding a priced service is a checklist item — re-evaluate.
+        await _verificationService.EvaluateAndAutoVerifyAsync(business.Id, cancellationToken);
 
         _logger.LogInformation("Service {ServiceId} created for business {BusinessId} by {UserId}",
             service.Id, business.Id, request.UserId);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/theme/app_theme.dart';
@@ -195,6 +196,24 @@ class AppointmentsScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Row(
+                        children: [
+                          TextButton.icon(
+                            onPressed: () => context.push(
+                              '/report-problem',
+                              extra: {
+                                'appointmentId': apt.id,
+                                'businessName': apt.businessName,
+                              },
+                            ),
+                            icon: const Icon(Icons.report_problem_outlined, size: 16),
+                            label: const Text('Report a Problem'),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               );

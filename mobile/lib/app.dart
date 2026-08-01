@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
-import 'features/settings/screens/settings_screen.dart';
+import 'features/settings/providers/app_settings_provider.dart';
+import 'l10n/generated/app_localizations.dart';
 
 class BookifyApp extends ConsumerWidget {
   const BookifyApp({super.key});
@@ -10,25 +11,18 @@ class BookifyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
-    final themeMode = ref.watch(themeModeProvider);
+    final settings = ref.watch(appSettingsProvider);
 
     return MaterialApp.router(
       title: 'Bookify',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
+      themeMode: settings.themeMode,
       routerConfig: router,
-      locale: const Locale('en'),
-      supportedLocales: const [
-        Locale('en', 'US'),
-        Locale('ur', 'PK'),
-      ],
-      localizationsDelegates: const [
-        // Flutter's built-in Material/Widgets localizations
-        DefaultMaterialLocalizations.delegate,
-        DefaultWidgetsLocalizations.delegate,
-      ],
+      locale: settings.locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
     );
   }
 }
