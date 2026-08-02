@@ -21,17 +21,22 @@ Write-Host "`n========================================" -ForegroundColor Cyan
 Write-Host "  Bookify API Startup Script" -ForegroundColor Cyan
 Write-Host "========================================`n" -ForegroundColor Cyan
 
-# Step 1: Kill existing process on port
-Write-Host "[1/5] Checking for existing process on port $PORT..." -ForegroundColor Yellow
-$existingProcess = netstat -ano | Select-String ":$PORT\s" | Select-String "LISTENING"
-if ($existingProcess) {
-    $processId = ($existingProcess -split '\s+')[-1]
-    Write-Host "      Found process $processId, killing..." -ForegroundColor Yellow
-    Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 2
-    Write-Host "      ✓ Process killed" -ForegroundColor Green
+# Step 1: Stop any existing API process via stop-api.ps1
+Write-Host "[1/5] Stopping any existing API process..." -ForegroundColor Yellow
+$stopScript = Join-Path $PSScriptRoot "stop-api.ps1"
+if (Test-Path $stopScript) {
+    & $stopScript
 } else {
-    Write-Host "      ✓ No existing process found" -ForegroundColor Green
+    # Fallback: inline kill if stop-api.ps1 is missing
+    $existingProcess = netstat -ano | Select-String ":$PORT\s" | Select-String "LISTENING"
+    if ($existingProcess) {
+        $processId = ($existingProcess -split '\s+')[-1]
+        Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
+        Write-Host "      ✓ Process $processId killed" -ForegroundColor Green
+    } else {
+        Write-Host "      ✓ No existing process found" -ForegroundColor Green
+    }
 }
 
 # Step 2: Clean build locks
@@ -72,8 +77,8 @@ $healthy = $false
 
 while ($retryCount -lt $maxRetries -and -not $healthy) {
     try {
-        $response = Invoke-WebRequest -Uri $healthUrl -Method Get -UseBasicParsing -TimeoutSec 2
-        if ($response.StatusCode -eq 200) {
+        $statusCode = curl.exe -s -o NUL -w "%{http_code}" $healthUrl
+        if ($statusCode -eq "200") {
             $healthy = $true
             break
         }
