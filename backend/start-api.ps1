@@ -67,12 +67,12 @@ Write-Host "      API started (PID: $($process.Id))" -ForegroundColor Green
 Write-Host "`n[5/5] Waiting for API to be healthy..." -ForegroundColor Yellow
 $maxRetries = 30
 $retryCount = 0
-$healthUrl = "$API_URL/api/v1/health"
+$healthUrl = "$API_URL/health"
 $healthy = $false
 
 while ($retryCount -lt $maxRetries -and -not $healthy) {
     try {
-        $response = Invoke-WebRequest -Uri $healthUrl -Method Head -UseBasicParsing -TimeoutSec 2
+        $response = Invoke-WebRequest -Uri $healthUrl -Method Get -UseBasicParsing -TimeoutSec 2
         if ($response.StatusCode -eq 200) {
             $healthy = $true
             break
