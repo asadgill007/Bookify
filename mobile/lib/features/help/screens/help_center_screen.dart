@@ -309,7 +309,7 @@ class _HelpCenterScreenState extends ConsumerState<HelpCenterScreen> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: () => context.push('/support/contact'),
+                  onPressed: () => context.push('/contact-support'),
                   icon: const Icon(Icons.email_outlined, size: 18),
                   label: const Text('Contact Support'),
                 ),

@@ -339,6 +339,14 @@ public class AuthService : IAuthService
         if (googleUser == null)
             return Result<AuthResponse>.Failure("Google sign-in failed: could not verify the ID token.", "INVALID_GOOGLE_TOKEN");
 
+        // Identity must come from a Google-verified token. Reject accounts whose
+        // email is not verified by Google (consumer accounts always pass this;
+        // Workspace admins can suppress the claim).
+        if (!googleUser.EmailVerified)
+            return Result<AuthResponse>.Failure(
+                "Google sign-in failed: the account's email is not verified.",
+                "EMAIL_NOT_VERIFIED");
+
         var normalizedEmail = googleUser.Email.Trim().ToLowerInvariant();
 
         // Prefer the user linked to this Google subject; fall back to email match.

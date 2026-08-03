@@ -72,7 +72,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: () => context.go('/home'),
+                      onPressed: () => context.go('/'),
                       child: Text(
                         'Skip',
                         style: TextStyle(
@@ -210,7 +210,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                                 curve: Curves.easeInOutCubic,
                               );
                             } else {
-                              context.go('/home');
+                              context.go('/');
                             }
                           },
                           shape: RoundedRectangleBorder(

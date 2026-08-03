@@ -27,6 +27,23 @@ class _GoogleSignInButtonState extends ConsumerState<GoogleSignInButton> {
     if (_loading) return;
     setState(() => _loading = true);
 
+    // On web a client ID is compiled in via --dart-define=GOOGLE_CLIENT_ID.
+    // When it is absent the plugin cannot start a flow, so report the real
+    // cause instead of a misleading "cancelled" message.
+    if (!_socialAuth.isGoogleConfigured) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Google sign-in is not configured for this build. '
+            'Add a web client ID via --dart-define=GOOGLE_CLIENT_ID.',
+          ),
+        ),
+      );
+      setState(() => _loading = false);
+      return;
+    }
+
     try {
       final account = await _socialAuth.signInWithGoogle();
       if (account == null) {

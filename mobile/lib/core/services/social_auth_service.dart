@@ -7,6 +7,13 @@ class SocialAuthService {
   GoogleSignInAccount? get currentUser => _googleSignInService.currentUser;
   bool get isSignedIn => _googleSignInService.isSignedIn;
 
+  /// Whether a web OAuth client ID was compiled into this build. On web,
+  /// Google Sign-In cannot start without it.
+  bool get isGoogleConfigured => _googleSignInService.isConfigured;
+
+  /// Whether Google Sign-In can actually start a flow in this build.
+  bool get isGoogleAvailable => _googleSignInService.isAvailable;
+
   Future<GoogleSignInAccount?> signInWithGoogle() async {
     return await _googleSignInService.signIn();
   }

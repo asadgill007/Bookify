@@ -1,6 +1,21 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 
 class GoogleSignInService {
+  /// Android OAuth Client ID (registered in Google Cloud Console with
+  /// package name `com.bookify.bookify` and debug SHA-1 fingerprint).
+  /// This is public by design — Google OAuth client IDs for mobile apps
+  /// are not secrets.
+  static const String _androidClientId =
+      '243414294987-p6385cttv2erie7nfpcc15m96bphuq7p.apps.googleusercontent.com';
+
+  /// iOS OAuth Client ID — NOT YET CREATED.
+  /// When you create an iOS OAuth Client in Google Cloud Console, paste the
+  /// client ID here. Until then, Google Sign-In on iOS will degrade gracefully
+  /// (the button shows but sign-in returns null).
+  static const String _iosClientId = '';
+
   /// Optional OAuth client ID for web, passed via
   /// `--dart-define=GOOGLE_CLIENT_ID=...`.
   ///
@@ -8,11 +23,31 @@ class GoogleSignInService {
   /// `GoogleSignIn` without one throws an assertion. We therefore create the
   /// instance lazily inside a try/catch so the app never crashes on startup
   /// when Google OAuth is not configured for the build.
-  static const String _clientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
+  static const String _webClientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
+
+  /// Resolves the correct client ID for the current platform.
+  /// - Web: uses `--dart-define=GOOGLE_CLIENT_ID` (required for web)
+  /// - Android: uses the hardcoded Android Client ID (registered in Google Cloud Console)
+  /// - iOS: uses `_iosClientId` (empty until iOS client is created)
+  static String get _clientId {
+    if (kIsWeb) return _webClientId;
+    if (Platform.isAndroid) return _androidClientId;
+    if (Platform.isIOS) return _iosClientId;
+    return _webClientId; // fallback
+  }
 
   GoogleSignIn? _googleSignIn;
   bool _initFailed = false;
   GoogleSignInAccount? _currentUser;
+
+  /// Whether a web OAuth client ID was compiled into this build via
+  /// `--dart-define=GOOGLE_CLIENT_ID=...`. On web this is mandatory for
+  /// Google Sign-In to work at all.
+  bool get isConfigured => _clientId.isNotEmpty;
+
+  /// Whether Google Sign-In is usable in this build (configured and the
+  /// plugin constructed successfully).
+  bool get isAvailable => !_initFailed && _googleSignIn != null && isConfigured;
 
   /// Lazily built (and guarded) GoogleSignIn instance. Construction on web
   /// throws when no client id is configured, so it is wrapped and the failure
@@ -40,6 +75,7 @@ class GoogleSignInService {
 
   /// Get current signed-in user
   GoogleSignInAccount? get currentUser => _currentUser;
+
 
   /// Check if user is already signed in
   bool get isSignedIn => _currentUser != null;

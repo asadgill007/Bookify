@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Google Sign-In Android Client ID.
+         This is public by design — Google OAuth client IDs for mobile apps
+         are not secrets. Registered in Google Cloud Console with:
+           Package name: com.bookify.bookify
+           Debug SHA-1:  12:95:7D:82:E3:3F:2C:F2:4A:AB:53:9D:36:9A:9D:3B:CB:16:AE:9D
+
+         iOS: When you create an iOS OAuth Client in Google Cloud Console,
+         add the iOS client ID to google_sign_in_service.dart (_iosClientId)
+         and add a corresponding entry here if needed. -->
+    <string name="default_web_client_id">243414294987-p6385cttv2erie7nfpcc15m96bphuq7p.apps.googleusercontent.com</string>
+</resources>

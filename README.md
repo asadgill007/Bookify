@@ -147,6 +147,67 @@ The API base URL can be set at build time:
 flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:5136
 ```
 
+### Google Sign-In Setup
+
+Google Sign-In is configured for **Android**. iOS is not yet wired in but is
+structured for a one-line addition when ready.
+
+#### What's already configured
+
+| File | Purpose |
+|------|---------|
+| `mobile/lib/core/services/google_sign_in_service.dart` | Platform-aware client ID resolution (`_androidClientId` constant, `_iosClientId` placeholder) |
+| `mobile/android/app/src/main/res/values/strings.xml` | `default_web_client_id` string resource for the `google_sign_in` Android plugin |
+| `backend/src/Bookify.WebApi/appsettings.json` → `Google:ClientId` | Backend validates Google ID token `aud` claim against this client ID |
+
+#### Android Client ID (already wired in)
+
+```
+Client ID:    243414294987-p6385cttv2erie7nfpcc15m96bphuq7p.apps.googleusercontent.com
+Package name: com.bookify.bookify
+SHA-1 (debug): 12:95:7D:82:E3:3F:2C:F2:4A:AB:53:9D:36:9A:9D:3B:CB:16:AE:9D
+```
+
+> **Note:** Google OAuth Client IDs for mobile apps are **public by design** — they
+> are not secrets and are safe to commit to source control. The SHA-1 fingerprint
+> is registered in Google Cloud Console, not stored in the app code.
+
+#### To test Google Sign-In on Android
+
+```bash
+# No dart-define needed — the client ID is baked into the Android config.
+cd mobile
+flutter run                    # Run on an Android emulator or physical device
+```
+
+The app will show a "Sign in with Google" button on the login/register screen.
+On web (Edge/Chrome), the button degrades gracefully (returns null, no crash)
+because no web OAuth client ID is configured via `--dart-define=GOOGLE_CLIENT_ID`.
+
+#### iOS setup (NOT YET DONE — when ready)
+
+1. Create an iOS OAuth Client ID in [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
+   - Application type: iOS
+   - Bundle ID: `com.bookify.bookify` (or your registered iOS bundle ID)
+2. Paste the iOS client ID into `mobile/lib/core/services/google_sign_in_service.dart`:
+   ```dart
+   static const String _iosClientId = 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com';
+   ```
+3. Add the reversed client ID URL scheme to `mobile/ios/Runner/Info.plist`:
+   ```xml
+   <key>CFBundleURLTypes</key>
+   <array>
+     <dict>
+       <key>CFBundleURLSchemes</key>
+       <array>
+         <string>REVERSED_CLIENT_ID</string>
+       </array>
+     </dict>
+   </array>
+   ```
+4. That's it — no backend changes needed (the backend validates the `aud` claim,
+   which will be the iOS client ID).
+
 ---
 
 ## 🧪 Running Tests

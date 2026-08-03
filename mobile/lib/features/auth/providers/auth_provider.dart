@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/constants/api_constants.dart';
@@ -196,6 +197,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
         error: null,
       );
       return true;
+    } on DioException catch (e) {
+      // Surface the backend's message (e.g. invalid/expired token, unverified
+      // email) when available so the user sees a meaningful error.
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        error: _serverMessage(e) ?? 'Google sign-in failed. Please try again.',
+      );
+      return false;
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
@@ -203,6 +212,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       return false;
     }
+  }
+
+  /// Extracts the `message` from the API's `{ success, message, errors }`
+  /// failure envelope, or null when it is absent.
+  static String? _serverMessage(DioException e) {
+    final data = e.response?.data;
+    if (data is Map<String, dynamic> && data['message'] is String) {
+      final message = data['message'] as String;
+      if (message.isNotEmpty) return message;
+    }
+    return null;
   }
 
   Future<void> logout() async {

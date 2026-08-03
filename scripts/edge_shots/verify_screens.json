@@ -1,0 +1,71 @@
+{
+  "routes": {
+    "/login": {
+      "url": "http://localhost:8090/settings",
+      "screens": [
+        "HomeScreen"
+      ]
+    },
+    "/register": {
+      "url": "http://localhost:8090/appointments",
+      "screens": [
+        "HomeScreen"
+      ]
+    },
+    "/": {
+      "url": "http://localhost:8090/chat",
+      "screens": [
+        "HomeScreen"
+      ]
+    },
+    "/categories": {
+      "url": "http://localhost:8090/categories",
+      "screens": [
+        "HomeScreen"
+      ]
+    },
+    "/search": {
+      "url": "http://localhost:8090/search",
+      "screens": [
+        "HomeScreen"
+      ]
+    },
+    "/help": {
+      "url": "http://localhost:8090/help",
+      "screens": [
+        "HomeScreen"
+      ]
+    },
+    "/favorites": {
+      "url": "http://localhost:8090/favorites",
+      "screens": [
+        "HomeScreen"
+      ]
+    },
+    "/profile": {
+      "url": "http://localhost:8090/profile",
+      "screens": [
+        "HomeScreen"
+      ]
+    },
+    "/settings": {
+      "url": "http://localhost:8090/settings",
+      "screens": [
+        "HomeScreen"
+      ]
+    },
+    "/appointments": {
+      "url": "http://localhost:8090/appointments",
+      "screens": [
+        "HomeScreen"
+      ]
+    },
+    "/chat": {
+      "url": "http://localhost:8090/chat",
+      "screens": [
+        "HomeScreen"
+      ]
+    }
+  },
+  "consoleErrors": []
+}
